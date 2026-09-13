@@ -1,0 +1,111 @@
+# Fetches fresh prices and commits them as a file your website reads.
+#
+# Runs in GitHub's cloud — nothing installed on your computer, no server to
+# pay for. The only setup is one secret:
+#
+#   Repo → Settings → Secrets and variables → Actions → New repository secret
+#     Name:   SERPER_KEY
+#     Value:  your key from serper.dev
+#
+# Then run it once by hand: Actions tab → "Refresh prices" → Run workflow.
+# Watch that first run. If the API key is wrong or the response shape has
+# changed, it fails there rather than silently producing an empty file.
+
+name: Refresh prices
+
+on:
+  schedule:
+    # 06:00 America/Toronto (11:00 UTC). GitHub's scheduler is best-effort and
+    # often runs late under load — fine for daily prices, not for anything
+    # time-critical.
+    - cron: "0 11 * * *"
+  workflow_dispatch:        # the "Run workflow" button
+
+concurrency:
+  # Never let two runs commit prices.json at once.
+  group: refresh-prices
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write       # needed to commit prices.json back
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # The database carries price history. GitHub's cache is best-effort —
+      # entries are evicted after ~7 days of no use — so history may have gaps.
+      # Good enough for "lowest in 90 days"; move to a real database when that
+      # claim starts mattering commercially.
+      - name: Restore price history
+        uses: actions/cache@v4
+        with:
+          path: data/golf.db
+          key: golf-db-${{ github.run_id }}
+          restore-keys: golf-db-
+
+      - name: Fetch prices
+        env:
+          GOLF_SHOPPING_PROVIDER: serper
+          SERPER_KEY: ${{ secrets.SERPER_KEY }}
+          GOLF_SHOPPING_COUNTRY: us
+          # Cache is per-run here (fresh container each time), so this only
+          # prevents duplicate calls within a single run.
+          GOLF_SHOPPING_CACHE_HOURS: "1"
+        run: |
+          if [ -z "$SERPER_KEY" ]; then
+            echo "::error::SERPER_KEY secret is not set. Add it under"
+            echo "::error::Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+          python -m app.ingest --source shopping
+
+      - name: Export for the website
+        # --min-offers 2 keeps only products with something to compare against.
+        # A single-offer row is not a price comparison.
+        run: python scripts/export_prices.py --out site/prices.json --min-offers 2
+
+      - name: Commit if prices changed
+        run: |
+          git config user.name  "bagdrop-bot"
+          git config user.email "bagdrop-bot@users.noreply.github.com"
+          git add site/prices.json
+          if git diff --staged --quiet; then
+            echo "No price changes today."
+          else
+            git commit -m "Prices: $(date -u '+%Y-%m-%d')"
+            git push
+          fi
+
+      - name: Summary
+        if: always()
+        run: |
+          if [ -f site/prices.json ]; then
+            python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json, pathlib
+          d = json.loads(pathlib.Path("site/prices.json").read_text())
+          print(f"### Prices refreshed\n")
+          print(f"- **{d['product_count']}** products")
+          print(f"- **{d['offer_count']}** offers")
+          print(f"- **{d['retailer_count']}** retailers")
+          print(f"- Generated `{d['generated_at']}`\n")
+          top = d["products"][:5]
+          if top:
+              print("| Club | Best | Spread |")
+              print("|---|---|---|")
+              for p in top:
+                  print(f"| {p['name']} | ${p['best']:.2f} | ${p['spread']:.2f} |")
+          PY
+          else
+            echo "No prices file was produced — check the Fetch step above." >> "$GITHUB_STEP_SUMMARY"
+          fi
