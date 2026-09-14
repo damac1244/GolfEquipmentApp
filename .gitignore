@@ -1,0 +1,8 @@
+.venv/
+__pycache__/
+*.py[cod]
+.env
+data/golf.db
+data/golf.db-wal
+data/golf.db-shm
+.pytest_cache/
