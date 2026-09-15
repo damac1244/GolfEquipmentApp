@@ -261,6 +261,59 @@ def test_unlisted_shaft_is_still_captured():
     assert p.model == "elyte"
 
 
+def test_iron_generations_are_separate_products():
+    """
+    P790 and T150 keep their names across generations sold years apart at very
+    different prices. Observed live: one "P790 Irons" product spanning 2019 to
+    2025, $479 to $1,399, shown as a 66% saving. The range was real; calling it
+    one product was not.
+    """
+    index = ProductIndex()
+    keys = {index.assign(parse(t)) for t in [
+        "TaylorMade 2019 P790 Irons",
+        "TaylorMade 2021 P790 Irons",
+        "TaylorMade 2023 P790 Irons",
+        "TaylorMade 2025 P790 Irons",
+    ]}
+    assert len(keys) == 4, f"expected 4 generations, got {len(keys)}"
+
+
+@pytest.mark.parametrize("a,b", [
+    ("TaylorMade Qi35 Driver 10.5 Stiff RH",
+     "2025 TaylorMade Qi35 Driver 10.5 Stiff RH"),
+    ("Vokey SM10 Wedge 56 RH", "2025 Vokey SM10 Wedge 56 RH"),
+])
+def test_year_does_not_split_non_iron_products(a, b):
+    """
+    Drivers and wedges get a new NAME each generation (Qi10 -> Qi35, SM9 ->
+    SM10), so the name already separates them. Adding the year there would
+    split one product in two for nothing.
+    """
+    index = ProductIndex()
+    assert index.assign(parse(a)) == index.assign(parse(b))
+
+
+@pytest.mark.parametrize("title,year", [
+    ("Taylormade P790 '23 Forged Iron Set 4-P", 2023),
+    ("Taylormade P790 '25 Forged Iron Set 5-P", 2025),
+    ("TaylorMade 2023 P790 Iron Set", 2023),
+    ("TaylorMade P790 Iron Set", None),
+])
+def test_two_digit_years(title, year):
+    assert parse(title).year == year
+
+
+@pytest.mark.parametrize("title,comp", [
+    ("Taylormade P790 Forged Iron Set 4-P", "4-PW"),
+    ("Taylormade P790 Iron Set 5-G", "5-GW"),
+    ("TaylorMade P790 Iron Set 4-PW", "4-PW"),
+    ("TaylorMade P790 #3-PW Iron Set", "3-PW"),
+])
+def test_single_letter_set_composition(title, comp):
+    """Sellers write "4-P" as often as "4-PW"."""
+    assert parse(title).set_composition == comp
+
+
 def test_model_year_does_not_split_a_product():
     a = parse("TaylorMade Qi35 Driver 10.5 Stiff RH")
     b = parse("2025 TaylorMade Qi35 Driver 10.5 Stiff RH")

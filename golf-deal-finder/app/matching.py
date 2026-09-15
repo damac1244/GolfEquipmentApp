@@ -198,9 +198,21 @@ _YEAR_RE = re.compile(r"\b(19|20)\d{2}\b")
 _LOFT_RE = re.compile(
     r"(?<![\d.])(\d{1,2}(?:\.\d)?)\s*(?:°|\*|\bdeg\b|\bdegrees?\b)", re.I
 )
+# Set composition. Sellers write "4-PW" and also "4-P", "5-G", "3-PW,AW".
+# The single-letter forms are common enough that missing them leaves the
+# composition unparsed, which puts a 4-iron-through-pitching-wedge set in the
+# same bucket as one that starts at 6.
 _SET_RE = re.compile(
-    r"\b(\d)\s*-\s*(pw|gw|aw|sw|lw|\d)(?:\s*[,+]\s*(pw|gw|aw|sw|lw))?\b", re.I
+    r"\b(\d)\s*-\s*(pw|gw|aw|sw|lw|p|g|a|s|w|\d)"
+    r"(?:\s*[,+]\s*(pw|gw|aw|sw|lw|p|g|a|s|w))?\b", re.I
 )
+
+# Single letters sellers use as shorthand for the top club in a set.
+_SET_LETTER = {"P": "PW", "G": "GW", "A": "AW", "S": "SW", "W": "PW"}
+
+# Two-digit model years: "P790 '23", "Qi '25". Common in seller titles and
+# invisible to a four-digit year pattern.
+_YEAR2_RE = re.compile(r"[‘’'`](\d{2})\b")
 _BOUNCE_RE = re.compile(r"\b(\d{2}(?:\.\d)?)\s*[.\-/]\s*(\d{1,2})\b")
 _LENGTH_RE = re.compile(r"\b(3[2-6])\s*(?:\"|in\b|inch\b)", re.I)
 _DOZEN_RE = re.compile(r"\b(\d+)\s*(?:dozen|dz|doz)\b|\bdozen\b", re.I)
@@ -389,9 +401,11 @@ def extract_set_composition(title: str) -> str | None:
     if not m:
         return None
     start, end, extra = m.group(1), m.group(2).upper(), m.group(3)
+    end = _SET_LETTER.get(end, end)
     comp = f"{start}-{end}"
     if extra:
-        comp += f",{extra.upper()}"
+        extra = extra.upper()
+        comp += f",{_SET_LETTER.get(extra, extra)}"
     return comp
 
 
@@ -524,6 +538,12 @@ def parse(
         year = int(ym.group(0))
         if 2005 <= year <= 2035:
             p.year = year
+    if p.year is None:
+        ym2 = _YEAR2_RE.search(title)
+        if ym2:
+            year = 2000 + int(ym2.group(1))
+            if 2005 <= year <= 2035:
+                p.year = year
 
     if p.club_type == "wedge":
         bm = _BOUNCE_RE.search(title)
@@ -565,6 +585,20 @@ def build_match_key(p: ParsedProduct) -> str:
         parts.append(f"f{p.flex}" if p.flex else "f?")
     if p.club_type == "iron_set":
         parts.append(f"s{p.set_composition}" if p.set_composition else "s?")
+
+    # Model year, but ONLY for irons.
+    #
+    # Most clubs get a new name each generation -- Qi10 becomes Qi35, SM9
+    # becomes SM10 -- so the name already separates them and adding the year
+    # would split one product into "Qi35" and "2025 Qi35" for nothing.
+    #
+    # Irons are the exception: P790 and T150 keep the same name across
+    # generations sold years apart at very different prices. Observed live:
+    # one "TaylorMade P790 Irons" product spanning the 2019, 2021, 2023 and
+    # 2025 models, $479 to $1,399, presented as a 66% saving. The range was
+    # real; calling it one product was not.
+    if p.club_type in {"iron_set", "single_iron"} and p.year:
+        parts.append(f"y{p.year}")
     if p.club_type == "putter" and p.length:
         parts.append(f"{p.length:g}in")
     if p.club_type not in {"golf_balls", "glove", "shoes", "bag", "rangefinder"}:
@@ -644,6 +678,12 @@ def can_merge(a: ParsedProduct, b: ParsedProduct, threshold: float = 0.86) -> bo
     if a.loft != b.loft or a.flex != b.flex or a.dexterity != b.dexterity:
         return False
     if a.set_composition != b.set_composition:
+        return False
+    # Irons keep their name across generations, so the year is part of the
+    # product. Without this the fuzzy path quietly undoes the year in the key:
+    # the model strings are identical, so everything from 2019 to 2025 merges
+    # back into one product.
+    if a.club_type in {"iron_set", "single_iron"} and (a.year or None) != (b.year or None):
         return False
     if SHAFT_IN_KEY and (a.shaft or None) != (b.shaft or None):
         return False
