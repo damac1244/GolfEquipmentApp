@@ -1,0 +1,77 @@
+# Seed queries for the shopping-search adapter.
+#
+# Shopping APIs are search-driven — you cannot ask for "all golf clubs". This
+# file IS your catalogue: one query per line, one billed API call per line per
+# refresh (cached for 24h).
+#
+# THIS FILE IS YOUR BILL. 60 queries daily is ~1,800 calls a month. On a
+# provider at $1 per 1,000 that is under $2; on SerpApi's starter plan it
+# exceeds the quota. Start with the 20 clubs people actually search for and
+# grow the list when you can see which ones earn.
+#
+# Tips:
+#   - Include the year or model name; "golf driver" returns noise.
+#   - Add "used" variants for the clubs where the used market is deep — the
+#     shopping index carries far less used stock than eBay or 2nd Swing, so
+#     treat these as a bonus, not your used coverage.
+#   - Comment out a line with # to stop paying for it.
+
+# ── Drivers: the highest-value, most-compared category ──
+TaylorMade Qi35 driver
+TaylorMade Qi35 Max driver
+Callaway Elyte driver
+Callaway Elyte Triple Diamond driver
+Titleist GT2 driver
+Titleist GT3 driver
+Ping G440 Max driver
+Ping G440 LST driver
+Cobra DS-Adapt Max driver
+Srixon ZXi driver
+
+# ── Fairways and hybrids ──
+TaylorMade Qi35 fairway wood
+Callaway Elyte fairway wood
+Titleist GT2 fairway wood
+Ping G440 hybrid
+Callaway Elyte hybrid
+
+# ── Iron sets: biggest absolute price spread, so the best savings stories ──
+TaylorMade P790 irons
+TaylorMade Qi irons
+Callaway Apex Ai200 irons
+Mizuno JPX925 Hot Metal irons
+Mizuno Pro 243 irons
+Titleist T150 irons
+Ping i230 irons
+Ping G440 irons
+Srixon ZXi5 irons
+
+# ── Wedges ──
+Titleist Vokey SM10 wedge
+Cleveland RTZ wedge
+Callaway Opus wedge
+Ping s159 wedge
+
+# ── Putters ──
+Scotty Cameron Phantom 11 putter
+Odyssey Ai-One putter
+TaylorMade Spider Tour putter
+Ping Anser putter
+LAB Golf DF3 putter
+
+# ── Balls: low value each, but high search volume and repeat purchase ──
+Titleist Pro V1 golf balls
+Titleist Pro V1x golf balls
+Callaway Chrome Soft golf balls
+TaylorMade TP5x golf balls
+Bridgestone Tour B XS golf balls
+Srixon Z-Star golf balls
+
+# ── Used variants: thin coverage here, but free to try ──
+used TaylorMade Qi35 driver
+used Callaway Elyte driver
+used Titleist GT2 driver
+used Ping G440 driver
+used TaylorMade P790 irons
+used Titleist Vokey SM10 wedge
+used Scotty Cameron putter
