@@ -33,6 +33,55 @@ from app import db  # noqa: E402
 
 SIZE_WARN_MB = 2.0
 
+# An offer priced below this fraction of the group's median is almost certainly
+# not the same thing as the others -- typically a single iron sitting in a set's
+# listing, or a headcover, or a shaft alone.
+#
+# Why a price rule rather than better parsing: retailers list an individual iron
+# and a full seven-iron set under the same words ("Titleist T150 Irons"), so no
+# amount of title reading separates them. The price does. Real observed case:
+# a $170 single iron inside a set group averaging $1,400, which the site would
+# have advertised as $1,825 of savings that do not exist.
+#
+# These offers are NOT deleted. They are flagged, kept out of the headline
+# best/spread figures, and shown with a warning — hiding data would be worse
+# than showing it honestly labelled.
+QUANTITY_OUTLIER_RATIO = 0.5
+
+# Below this many offers a median means little, so no flagging.
+MIN_OFFERS_FOR_OUTLIER_CHECK = 4
+
+
+def median(values: list[float]) -> float:
+    ordered = sorted(values)
+    n = len(ordered)
+    mid = n // 2
+    return ordered[mid] if n % 2 else (ordered[mid - 1] + ordered[mid]) / 2
+
+
+def flag_quantity_outliers(offers: list[dict]) -> int:
+    """
+    Mark offers too cheap to plausibly be the same item. Returns how many.
+    Every offer gets an explicit `suspect` key so the front end never has to
+    guess at a missing field.
+    """
+    for o in offers:
+        o["suspect"] = False
+
+    if len(offers) < MIN_OFFERS_FOR_OUTLIER_CHECK:
+        return 0
+
+    mid = median([o["total"] for o in offers])
+    if mid <= 0:
+        return 0
+
+    flagged = 0
+    for o in offers:
+        if o["total"] < mid * QUANTITY_OUTLIER_RATIO:
+            o["suspect"] = True
+            flagged += 1
+    return flagged
+
 
 def build(conn: sqlite3.Connection, min_offers: int, include_used: bool) -> dict:
     products = []
@@ -75,7 +124,16 @@ def build(conn: sqlite3.Connection, min_offers: int, include_used: bool) -> dict
         if len(offers) < min_offers:
             continue
 
-        totals = [o["total"] for o in offers]
+        suspect_count = flag_quantity_outliers(offers)
+
+        # Headline numbers come from comparable offers only. A suspect row can
+        # still be the genuinely cheapest thing on the page, but claiming it as
+        # "the best price for this product" would be false.
+        comparable = [o for o in offers if not o["suspect"]]
+        if not comparable:
+            comparable = offers
+
+        totals = [o["total"] for o in comparable]
         best, worst = min(totals), max(totals)
 
         history = [dict(h) for h in conn.execute("""
@@ -101,11 +159,12 @@ def build(conn: sqlite3.Connection, min_offers: int, include_used: bool) -> dict
             "worst": worst,
             "spread": round(worst - best, 2),
             "spread_pct": round((worst - best) / worst * 100, 1) if worst else 0.0,
-            "new_from": min([o["total"] for o in offers if o["condition"] == "new"],
+            "new_from": min([o["total"] for o in comparable if o["condition"] == "new"],
                             default=None),
-            "used_from": min([o["total"] for o in offers if o["condition"] != "new"],
+            "used_from": min([o["total"] for o in comparable if o["condition"] != "new"],
                              default=None),
             "retailers": len({o["retailer"] for o in offers}),
+            "suspect_count": suspect_count,
             "lowest_90d": round(min(lows), 2) if lows else None,
             # Only claim a low when there is enough history to mean it.
             "is_low": bool(lows and len(history) >= 3 and best <= min(lows) + 0.005),

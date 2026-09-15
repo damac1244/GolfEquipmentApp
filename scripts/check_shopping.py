@@ -34,6 +34,7 @@ from app.matching import parse  # noqa: E402
 
 QUERY = sys.argv[1] if len(sys.argv) > 1 else "TaylorMade Qi35 driver"
 OUT = Path("shopping-response.json")
+RAW_OUT = Path("shopping-raw.json")
 
 
 def fail(msg: str) -> None:
@@ -57,8 +58,29 @@ def main() -> None:
         fail(f"No API key found for {provider.id}. Set its key and try again.")
 
     # --- raw call ---------------------------------------------------------
+    # The RAW payload is saved before any of our field mapping touches it.
+    # That is the only way to see what the provider actually calls things, and
+    # the only way to tell whether a field we care about (a direct merchant
+    # link, a condition flag) exists under a name we are not reading.
     try:
         with httpx.Client(timeout=config.HTTP_TIMEOUT) as client:
+            if provider.id == "serper":
+                raw = client.post(
+                    "https://google.serper.dev/shopping",
+                    headers={"X-API-KEY": config.SERPER_KEY or "",
+                             "Content-Type": "application/json"},
+                    json={"q": QUERY, "gl": config.SHOPPING_COUNTRY, "num": 20},
+                )
+            else:
+                raw = client.get("https://serpapi.com/search.json", params={
+                    "engine": "google_shopping", "q": QUERY,
+                    "api_key": config.SERPAPI_KEY, "num": 20,
+                    "gl": config.SHOPPING_COUNTRY, "hl": "en",
+                })
+            raw.raise_for_status()
+            RAW_OUT.write_text(json.dumps(raw.json(), indent=2)[:400000])
+            print(f"Raw provider response saved to {RAW_OUT}")
+
             rows = provider.search(client, QUERY, 20)
     except httpx.HTTPStatusError as exc:
         code = exc.response.status_code
