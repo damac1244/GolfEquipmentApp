@@ -39,6 +39,21 @@ SHOPPING_PROVIDER = os.getenv("GOLF_SHOPPING_PROVIDER")     # serpapi | serper
 SERPAPI_KEY = os.getenv("SERPAPI_KEY")
 SERPER_KEY = os.getenv("SERPER_KEY")
 SHOPPING_COUNTRY = os.getenv("GOLF_SHOPPING_COUNTRY", "us")
+
+# Which country's Google Shopping we ask decides which currency comes back.
+# Getting this wrong is not a cosmetic bug: a page that shows "$1,099" without
+# saying whose dollars is wrong for roughly half the people reading it.
+COUNTRY_CURRENCY = {
+    "us": "USD", "ca": "CAD", "gb": "GBP", "uk": "GBP", "au": "AUD",
+    "nz": "NZD", "ie": "EUR", "de": "EUR", "fr": "EUR", "es": "EUR",
+    "it": "EUR", "nl": "EUR", "jp": "JPY", "se": "SEK", "za": "ZAR",
+}
+# Override only if you know the feed disagrees with its own country setting.
+SHOPPING_CURRENCY = os.getenv(
+    "GOLF_SHOPPING_CURRENCY",
+    COUNTRY_CURRENCY.get(SHOPPING_COUNTRY.lower(), "USD"),
+).upper()
+
 # Results per query. Higher = better coverage, same cost per query.
 SHOPPING_PER_QUERY = int(os.getenv("GOLF_SHOPPING_PER_QUERY", "40"))
 # Cached responses are free. Daily is plenty -- retailers reprice in campaign

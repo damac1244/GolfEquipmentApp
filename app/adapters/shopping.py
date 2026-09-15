@@ -82,6 +82,49 @@ def parse_price(value) -> float | None:
     return round(price, 2) if price > 0 else None
 
 
+# Symbols seen in shopping feeds. Longest first, because these prefixes
+# overlap: "S$" sits inside "US$", "A$" inside "CA$". Testing the short one
+# first turns every American price into a Singaporean one.
+_CURRENCY_MARKERS = sorted([
+    ("CA$", "CAD"), ("C$", "CAD"), ("A$", "AUD"), ("AU$", "AUD"),
+    ("NZ$", "NZD"), ("R$", "BRL"), ("HK$", "HKD"), ("S$", "SGD"),
+    ("US$", "USD"), ("£", "GBP"), ("€", "EUR"), ("¥", "JPY"),
+    ("₹", "INR"), ("$", "USD"),
+], key=lambda pair: -len(pair[0]))
+_CURRENCY_CODE_RE = re.compile(r"\b([A-Z]{3})\b")
+_KNOWN_CODES = {
+    "USD", "CAD", "GBP", "EUR", "AUD", "NZD", "JPY", "SEK", "ZAR",
+    "CHF", "INR", "SGD", "HKD", "BRL", "MXN", "DKK", "NOK", "PLN",
+}
+
+
+def parse_currency(value, default: str) -> str:
+    """
+    Read the currency out of a price the way it was written, e.g. 'CA$1,299'
+    -> 'CAD', '£899' -> 'GBP', '1299 USD' -> 'USD'.
+
+    Falls back to `default` (the country we queried) when the feed gives a bare
+    number, which is common. A wrong currency is worse than an unlabelled one:
+    it invites someone to compare a US price against a Canadian one and
+    conclude they have found a bargain that does not exist.
+    """
+    if value is None:
+        return default
+    text = str(value)
+    code = _CURRENCY_CODE_RE.search(text)
+    if code and code.group(1) in _KNOWN_CODES:
+        return code.group(1)
+    for marker, currency in _CURRENCY_MARKERS:
+        at = text.find(marker)
+        # A letter immediately before the symbol means we have landed inside a
+        # longer word ("PLUS$100" is not Singapore dollars), so keep looking.
+        while at != -1:
+            if at == 0 or not text[at - 1].isalpha():
+                return currency
+            at = text.find(marker, at + 1)
+    return default
+
+
 def parse_shipping(value) -> float | None:
     """
     'Free delivery' -> 0.0, '$5.99 delivery' -> 5.99, anything else -> None.
@@ -398,6 +441,9 @@ class ShoppingAdapter(Adapter):
             title=title,
             price=price,
             original_price=old_price if old_price and old_price > price else None,
+            # Taken from how the seller wrote the price, not assumed from the
+            # country we asked: a US query can still return a foreign seller.
+            currency=parse_currency(row.get("price"), config.SHOPPING_CURRENCY),
             url=url,
             shipping=parse_shipping(row.get("shipping")),
             image_url=row.get("image"),

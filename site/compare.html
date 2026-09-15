@@ -72,7 +72,11 @@ button{font-family:inherit}
 }
 .pill[aria-pressed="true"]{color:var(--deep);background:var(--used);border-color:var(--used);font-weight:600}
 
-.summary{display:flex;gap:18px;flex-wrap:wrap;font-size:.83rem;color:var(--n600);margin-bottom:14px}
+.summary{display:flex;gap:18px;flex-wrap:wrap;align-items:center;font-size:.83rem;color:var(--n600);margin-bottom:14px}
+/* Currency is stated once, plainly, rather than repeated on 500 rows. */
+.cur{font-size:.68rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--n800);background:var(--raised);border:1px solid var(--n300);
+  border-radius:999px;padding:4px 10px}
 .legend{display:flex;gap:7px;align-items:center}
 .dot{width:8px;height:8px;border-radius:50%;flex:none}
 .dot.new{background:var(--new)}
@@ -135,6 +139,14 @@ th.r,td.r{text-align:right}
 .ship{font-size:.75rem;color:var(--n600)}
 tr.best td{background:var(--used-100)}
 tr.best{box-shadow:inset 2px 0 0 var(--used)}
+/* Offers the engine could not compare like for like — a single iron inside a
+   set listing, a bulk case, a price in another currency. Shown, because
+   hiding data is worse, but dimmed and labelled so nobody reads them as the
+   bargain of the page. */
+tr.susp td{opacity:.5}
+.flag{display:inline-block;font-size:.6rem;font-weight:700;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--n700);border:1px solid var(--n400);
+  border-radius:3px;padding:2px 6px;margin-left:8px;vertical-align:1px;white-space:nowrap}
 .go{
   display:inline-block;font-size:.78rem;font-weight:600;text-decoration:none;
   color:var(--deep);background:var(--used);border-radius:5px;padding:6px 13px;white-space:nowrap;
@@ -194,6 +206,7 @@ footer{border-top:1px solid var(--n300);padding-block:22px 40px;font-size:.8rem;
 
   <div class="summary">
     <span id="count">—</span>
+    <span class="cur" id="currency" hidden></span>
     <span class="legend"><span class="dot new"></span>New</span>
     <span class="legend"><span class="dot used"></span>Used</span>
   </div>
@@ -202,7 +215,9 @@ footer{border-top:1px solid var(--n300);padding-block:22px 40px;font-size:.8rem;
 
   <footer>
     <p class="disclosure">Ranked by total price including shipping, and nothing else.
-    Some links earn us a commission; that never changes the order.</p>
+    Some links earn us a commission; that never changes the order.
+    Prices are shown in the currency the seller quoted and are not converted —
+    check the seller's own page before you buy.</p>
     <p>&copy; 2026 Bagdrop &middot; <a href="mailto:hello@thebagdropgolf.com">hello@thebagdropgolf.com</a></p>
   </footer>
 </div>
@@ -221,15 +236,50 @@ footer{border-top:1px solid var(--n300);padding-block:22px 40px;font-size:.8rem;
   var typeFilter = "";
   var open = {};   // product id -> expanded
 
+  // Currency of the data as a whole. MIXED means the feed returned more than
+  // one, so every figure has to name its own rather than trusting a single
+  // label at the top of the page.
+  var SITE_CURRENCY = "USD";
+  var MIXED = false;
+
+  var CURRENCY_NAME = {
+    USD: "US dollars", CAD: "Canadian dollars", GBP: "pounds sterling",
+    EUR: "euros", AUD: "Australian dollars", NZD: "New Zealand dollars",
+    JPY: "yen"
+  };
+
   var TYPE_LABEL = {
     driver: "Driver", fairway_wood: "Fairway", hybrid: "Hybrid",
     iron_set: "Irons", single_iron: "Iron", wedge: "Wedge",
     putter: "Putter", golf_balls: "Balls"
   };
 
-  function money(n) {
+  // Intl does the disambiguating for us: a reader in Canada looking at US
+  // prices sees "US$1,099.00", a reader in the States sees "$1,099.00". When
+  // the data holds several currencies nobody gets a bare symbol.
+  var fmtCache = {};
+  function formatter(cur) {
+    var display = MIXED ? "code" : "narrowSymbol";
+    var key = cur + "|" + display;
+    if (!(key in fmtCache)) {
+      try {
+        fmtCache[key] = new Intl.NumberFormat(undefined, {
+          style: "currency", currency: cur, currencyDisplay: display,
+          minimumFractionDigits: 2, maximumFractionDigits: 2
+        });
+      } catch (e) {
+        fmtCache[key] = null;   // unknown code, or an old browser
+      }
+    }
+    return fmtCache[key];
+  }
+
+  function money(n, cur) {
     if (n === null || n === undefined) return "—";
-    return "$" + n.toFixed(2);
+    var c = cur || SITE_CURRENCY;
+    var f = formatter(c);
+    if (f) return f.format(n);
+    return (MIXED ? c + " " : "$") + n.toFixed(2);
   }
 
   function esc(s) {
@@ -262,8 +312,26 @@ footer{border-top:1px solid var(--n300);padding-block:22px 40px;font-size:.8rem;
     return o.grade ? base + " · " + o.grade : base;
   }
 
+  function currencyWords(code) {
+    return CURRENCY_NAME[code] || code;
+  }
+
+  function flagText(o) {
+    if (!o.suspect) return "";
+    var why = o.suspect_reason === "currency"
+      ? "Priced in " + (o.currency || "another currency")
+      : "Not comparable";
+    return '<span class="flag">' + esc(why) + '</span>';
+  }
+
   function offerRows(p) {
-    var best = p.offers[0];
+    // The highlighted row is the best offer we can stand behind, which is not
+    // always the cheapest one on the table.
+    var best = null;
+    for (var b = 0; b < p.offers.length; b++) {
+      if (!p.offers[b].suspect) { best = p.offers[b]; break; }
+    }
+
     var html = "";
     for (var i = 0; i < p.offers.length; i++) {
       var o = p.offers[i];
@@ -271,13 +339,15 @@ footer{border-top:1px solid var(--n300);padding-block:22px 40px;font-size:.8rem;
       var cls = isNew ? "is-new" : "is-used";
       var ship = o.shipping === null || o.shipping === undefined
         ? '<span class="ship">+ shipping unknown</span>'
-        : (o.shipping > 0 ? '<span class="ship">incl. ' + money(o.shipping) + ' shipping</span>' : '<span class="ship">free shipping</span>');
+        : (o.shipping > 0 ? '<span class="ship">incl. ' + money(o.shipping, o.currency) + ' shipping</span>' : '<span class="ship">free shipping</span>');
+
+      var rowCls = o === best ? "best" : (o.suspect ? "susp" : "");
 
       html +=
-        '<tr' + (o === best ? ' class="best"' : '') + '>' +
+        '<tr' + (rowCls ? ' class="' + rowCls + '"' : '') + '>' +
           '<td><span class="seller">' + esc(o.retailer) + '</span></td>' +
-          '<td><span class="cond">' + conditionText(o) + '</span></td>' +
-          '<td class="r"><span class="total ' + cls + ' num">' + money(o.total) + '</span><br>' + ship + '</td>' +
+          '<td><span class="cond">' + conditionText(o) + '</span>' + flagText(o) + '</td>' +
+          '<td class="r"><span class="total ' + cls + ' num">' + money(o.total, o.currency) + '</span><br>' + ship + '</td>' +
           '<td class="r"><a class="go" href="' + esc(o.url) + '" target="_blank" rel="nofollow noopener sponsored">View</a></td>' +
         '</tr>';
     }
@@ -288,7 +358,12 @@ footer{border-top:1px solid var(--n300);padding-block:22px 40px;font-size:.8rem;
     var isOpen = !!open[p.id];
     // The title already carries brand, model, loft, flex and dexterity.
     // Repeating them here wastes the line — say what the title cannot.
-    var usedCount = p.offers.filter(function (o) { return o.condition !== "new"; }).length;
+    // Only listings that survived the comparison checks. Advertising a used
+    // option that turns out to be a lone iron or a foreign price is worse
+    // than saying "new only".
+    var usedCount = p.offers.filter(function (o) {
+      return o.condition !== "new" && !o.suspect;
+    }).length;
     var spec = [p.retailers + (p.retailers === 1 ? " seller" : " sellers")];
     if (usedCount) {
       spec.push(usedCount + " used listing" + (usedCount === 1 ? "" : "s"));
@@ -319,18 +394,18 @@ footer{border-top:1px solid var(--n300);padding-block:22px 40px;font-size:.8rem;
             '<span class="pblock">' +
               '<span class="plabel">New from</span><br>' +
               (p.new_from !== null && p.new_from !== undefined
-                ? '<span class="pval is-new num">' + money(p.new_from) + '</span>'
+                ? '<span class="pval is-new num">' + money(p.new_from, p.currency) + '</span>'
                 : '<span class="pval none">—</span>') +
             '</span>' +
             '<span class="pblock">' +
               '<span class="plabel">Used from</span><br>' +
               (p.used_from !== null && p.used_from !== undefined
-                ? '<span class="pval is-used num">' + money(p.used_from) + '</span>'
+                ? '<span class="pval is-used num">' + money(p.used_from, p.currency) + '</span>'
                 : '<span class="pval none">none listed</span>') +
             '</span>' +
             '<span class="pblock">' +
               '<span class="plabel">Spread</span><br>' +
-              '<span class="save num">' + money(p.spread) + '</span>' +
+              '<span class="save num">' + money(p.spread, p.currency) + '</span>' +
             '</span>' +
             '<span class="chev">' + (isOpen ? "▲" : "▼") + '</span>' +
           '</span>' +
@@ -338,10 +413,16 @@ footer{border-top:1px solid var(--n300);padding-block:22px 40px;font-size:.8rem;
         (isOpen
           ? '<div class="detail"><div class="scroller"><table>' +
               '<thead><tr><th scope="col">Seller</th><th scope="col">Condition</th>' +
-              '<th scope="col" class="r">Total</th><th scope="col" class="r"></th></tr></thead>' +
+              '<th scope="col" class="r">Total' +
+              (MIXED ? "" : " (" + esc(p.currency || SITE_CURRENCY) + ")") +
+              '</th><th scope="col" class="r"></th></tr></thead>' +
               '<tbody>' + offerRows(p) + '</tbody></table></div>' +
-              '<div class="foot-note">Totals include shipping where the seller states it. ' +
-              'Condition wording is normalised across sellers.</div></div>'
+              '<div class="foot-note">Totals include shipping where the seller states it, ' +
+              'in ' + esc(currencyWords(p.currency || SITE_CURRENCY)) + '. ' +
+              'Condition wording is normalised across sellers. ' +
+              'Dimmed rows are listings we could not compare like for like — ' +
+              'a different quantity, or a price in another currency — so they ' +
+              'are left out of the figures above.</div></div>'
           : "") +
       '</article>';
   }
@@ -411,6 +492,20 @@ footer{border-top:1px solid var(--n300);padding-block:22px 40px;font-size:.8rem;
     })
     .then(function (d) {
       DATA = d;
+
+      SITE_CURRENCY = d.currency || "USD";
+      var codes = Object.keys(d.currencies || {});
+      MIXED = codes.length > 1;
+
+      var curEl = document.getElementById("currency");
+      curEl.textContent = MIXED
+        ? "Prices in " + codes.join(", ")
+        : "Prices in " + SITE_CURRENCY;
+      curEl.title = MIXED
+        ? "This page holds more than one currency, so every figure names its own."
+        : "All prices on this page are in " + currencyWords(SITE_CURRENCY) + ".";
+      curEl.hidden = false;
+
       freshEl.textContent = "Prices updated " + ago(d.generated_at) +
         " · " + d.retailer_count + " sellers";
       render();

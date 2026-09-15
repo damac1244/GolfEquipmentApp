@@ -34,8 +34,45 @@ except ModuleNotFoundError:  # pragma: no cover
     pytest = _Shim()  # type: ignore[assignment]
 
 from app.adapters.shopping import (  # noqa: E402
-    ShoppingAdapter, looks_like_golf, parse_price, parse_shipping,
+    ShoppingAdapter, looks_like_golf, parse_currency, parse_price,
+    parse_shipping,
 )
+
+
+# --------------------------------------------------------------------------
+# Currency — the failure here is silent and expensive
+# --------------------------------------------------------------------------
+
+@pytest.mark.parametrize("raw,expected", [
+    # The dangerous pair: both say "$", and reading one as the other turns a
+    # 35% exchange-rate gap into an apparent bargain.
+    ("CA$1,299.00", "CAD"),
+    ("C$1,299.00", "CAD"),
+    ("US$1,299.00", "USD"),
+    ("$1,299.00", "USD"),
+    ("£899.99", "GBP"),
+    ("€1.049,00", "EUR"),
+    ("A$1,899.00", "AUD"),
+    ("NZ$2,099.00", "NZD"),
+    ("¥149,800", "JPY"),
+    # Explicit codes beat symbols, wherever they sit in the string.
+    ("1299.00 USD", "USD"),
+    ("CAD 1,299.00", "CAD"),
+])
+def test_parse_currency_reads_what_the_seller_wrote(raw, expected):
+    assert parse_currency(raw, "USD") == expected
+
+
+@pytest.mark.parametrize("raw", [None, "", "1299.00", "1,299", 1299.0, "From 899"])
+def test_parse_currency_falls_back_to_the_country_queried(raw):
+    """A bare number is the common case, not an error."""
+    assert parse_currency(raw, "CAD") == "CAD"
+
+
+def test_parse_currency_ignores_stray_three_letter_words():
+    """'NEW' and 'SET' are not currencies."""
+    assert parse_currency("NEW SET $1,299.00", "USD") == "USD"
+    assert parse_currency("RH SET CA$1,299.00", "USD") == "CAD"
 
 
 # --------------------------------------------------------------------------

@@ -82,6 +82,42 @@ def median(values: list[float]) -> float:
     return ordered[mid] if n % 2 else (ordered[mid - 1] + ordered[mid]) / 2
 
 
+def flag_foreign_currencies(offers: list[dict]) -> int:
+    """
+    Keep one product's comparison inside one currency. Returns how many offers
+    were set aside.
+
+    A US query can still surface a seller quoting pounds or Canadian dollars.
+    Ranking those totals against each other is not a near-miss, it is
+    arithmetic on different units: £899 would sort below $1,099 and be
+    presented as the better buy. The majority currency wins the group and the
+    rest are flagged, exactly like a quantity mismatch -- shown, labelled, and
+    kept out of the headline figures.
+    """
+    present = [o.get("currency") for o in offers if o.get("currency")]
+    if len(set(present)) < 2:
+        return 0
+
+    counts: dict[str, int] = {}
+    for c in present:
+        counts[c] = counts.get(c, 0) + 1
+    # Ties break towards the cheaper-to-explain option: the currency of the
+    # cheapest offer in the group, so the headline price stays a real one.
+    dominant = max(counts, key=lambda c: (counts[c], -min(
+        o["total"] for o in offers if o.get("currency") == c)))
+
+    flagged = 0
+    for o in offers:
+        if o.get("currency") and o["currency"] != dominant:
+            # Count only rows the quantity pass had not already set aside,
+            # so a single bad offer is not reported twice.
+            if not o.get("suspect"):
+                flagged += 1
+            o["suspect"] = True
+            o["suspect_reason"] = "currency"
+    return flagged
+
+
 def flag_quantity_outliers(offers: list[dict]) -> int:
     """
     Mark offers too cheap to plausibly be the same item. Returns how many.
@@ -90,6 +126,7 @@ def flag_quantity_outliers(offers: list[dict]) -> int:
     """
     for o in offers:
         o["suspect"] = False
+        o["suspect_reason"] = None
 
     totals = [o["total"] for o in offers]
     if len(totals) < 2:
@@ -115,6 +152,7 @@ def flag_quantity_outliers(offers: list[dict]) -> int:
     for o in offers:
         if o["total"] < low or o["total"] > high:
             o["suspect"] = True
+            o["suspect_reason"] = "quantity"
             flagged += 1
 
     # Never flag everything -- if each offer is below the threshold the
@@ -122,6 +160,7 @@ def flag_quantity_outliers(offers: list[dict]) -> int:
     if flagged == len(offers):
         for o in offers:
             o["suspect"] = False
+            o["suspect_reason"] = None
         return 0
     return flagged
 
@@ -137,8 +176,9 @@ def build(conn: sqlite3.Connection, min_offers: int, include_used: bool) -> dict
 
     for p in rows:
         sql = """
-            SELECT retailer, source, condition, grade, price, shipping, url,
-                   commission_rate, rating, rating_count, last_seen
+            SELECT retailer, source, condition, grade, price, shipping,
+                   currency, url, commission_rate, rating, rating_count,
+                   last_seen
               FROM offers WHERE product_id = ?
         """
         params: list = [p["id"]]
@@ -157,6 +197,7 @@ def build(conn: sqlite3.Connection, min_offers: int, include_used: bool) -> dict
                 # null means unknown shipping, which is not the same as free.
                 "shipping": o["shipping"],
                 "total": total,
+                "currency": o["currency"] or "USD",
                 "url": o["url"],
                 # Whether this row pays you. The page must never sort on it,
                 # but you want to know.
@@ -169,7 +210,10 @@ def build(conn: sqlite3.Connection, min_offers: int, include_used: bool) -> dict
         if len(offers) < min_offers:
             continue
 
+        # Order matters: the quantity pass clears the flags before setting its
+        # own, so the currency pass has to run after it, not before.
         suspect_count = flag_quantity_outliers(offers)
+        suspect_count += flag_foreign_currencies(offers)
 
         # Headline numbers come from comparable offers only. A suspect row can
         # still be the genuinely cheapest thing on the page, but claiming it as
@@ -200,6 +244,9 @@ def build(conn: sqlite3.Connection, min_offers: int, include_used: bool) -> dict
             "dex": p["dexterity"],
             "set": p["set_composition"],
             "image": p["image_url"],
+            # The currency the headline figures are quoted in. Comparable
+            # offers share one by construction, so the first is the group's.
+            "currency": comparable[0]["currency"],
             "best": best,
             "worst": worst,
             "spread": round(worst - best, 2),
@@ -208,7 +255,10 @@ def build(conn: sqlite3.Connection, min_offers: int, include_used: bool) -> dict
                             default=None),
             "used_from": min([o["total"] for o in comparable if o["condition"] != "new"],
                              default=None),
-            "retailers": len({o["retailer"] for o in offers}),
+            # Sellers whose price actually counts. A seller whose only listing
+            # was set aside still appears in the table, but claiming them in
+            # "6 sellers" would overstate how much comparing we did.
+            "retailers": len({o["retailer"] for o in comparable}),
             "suspect_count": suspect_count,
             "lowest_90d": round(min(lows), 2) if lows else None,
             # Only claim a low when there is enough history to mean it.
@@ -218,11 +268,23 @@ def build(conn: sqlite3.Connection, min_offers: int, include_used: bool) -> dict
 
     products.sort(key=lambda x: x["spread"], reverse=True)
 
+    # What currency is this site in? Counted rather than assumed, so the page
+    # states what the data actually holds. `currencies` lets the front end tell
+    # the ordinary case (one currency, label it once) from the awkward one
+    # (several, label every row).
+    tally: dict[str, int] = {}
+    for p in products:
+        for o in p["offers"]:
+            tally[o["currency"]] = tally.get(o["currency"], 0) + 1
+    primary = max(tally, key=lambda c: tally[c]) if tally else "USD"
+
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "product_count": len(products),
         "offer_count": sum(len(p["offers"]) for p in products),
         "retailer_count": len({o["retailer"] for p in products for o in p["offers"]}),
+        "currency": primary,
+        "currencies": dict(sorted(tally.items(), key=lambda kv: -kv[1])),
         "products": products,
     }
 
@@ -255,6 +317,11 @@ def main() -> None:
     size_mb = out.stat().st_size / 1_048_576
     print(f"{payload['product_count']} products, {payload['offer_count']} offers "
           f"from {payload['retailer_count']} retailers")
+    mix = payload["currencies"]
+    print("currency: " + ", ".join(f"{c} x{n}" for c, n in mix.items()))
+    if len(mix) > 1:
+        print("  ! More than one currency in the data. Offers outside the "
+              "majority currency are flagged and kept out of headline prices.")
     print(f"-> {out} ({size_mb:.2f} MB)")
 
     if size_mb > SIZE_WARN_MB:

@@ -36,11 +36,75 @@ except ModuleNotFoundError:  # pragma: no cover
         mark = _Mark()
     pytest = _Shim()  # type: ignore[assignment]
 
-from export_prices import flag_quantity_outliers, median  # noqa: E402
+from export_prices import (  # noqa: E402
+    flag_foreign_currencies, flag_quantity_outliers, median,
+)
 
 
 def _offers(totals):
     return [{"total": t} for t in totals]
+
+
+def _priced(pairs):
+    """[(total, currency), ...] -> offer dicts, already through the first pass."""
+    offers = [{"total": t, "currency": c, "suspect": False,
+               "suspect_reason": None} for t, c in pairs]
+    return offers
+
+
+# --------------------------------------------------------------------------
+# Currency mismatches. Comparing £899 against $1,099 is not a rounding error,
+# it is arithmetic on different units — and it always flatters the foreign row.
+# --------------------------------------------------------------------------
+
+def test_single_currency_is_left_alone():
+    offers = _priced([(899.00, "USD"), (999.00, "USD"), (1099.00, "USD")])
+    assert flag_foreign_currencies(offers) == 0
+    assert not any(o["suspect"] for o in offers)
+
+
+def test_minority_currency_is_flagged():
+    offers = _priced([(899.00, "GBP"), (1049.00, "USD"), (1099.00, "USD")])
+    assert flag_foreign_currencies(offers) == 1
+    assert offers[0]["suspect"] is True
+    assert offers[0]["suspect_reason"] == "currency"
+    assert not offers[1]["suspect"] and not offers[2]["suspect"]
+
+
+def test_the_cheapest_row_does_not_win_by_being_foreign():
+    """The bug this guard exists to stop: a pound price heading the table."""
+    offers = _priced([(899.00, "GBP"), (1049.00, "USD"), (1099.00, "USD")])
+    flag_foreign_currencies(offers)
+    comparable = [o for o in offers if not o["suspect"]]
+    assert min(o["total"] for o in comparable) == 1049.00
+
+
+def test_missing_currency_is_not_treated_as_foreign():
+    """Older rows predate the currency column; absence is not disagreement."""
+    offers = [{"total": 899.00, "suspect": False, "suspect_reason": None},
+              {"total": 999.00, "currency": "USD", "suspect": False,
+               "suspect_reason": None}]
+    assert flag_foreign_currencies(offers) == 0
+
+
+def test_a_row_already_flagged_is_not_counted_twice():
+    offers = _priced([(55.00, "GBP"), (999.00, "USD"), (1099.00, "USD")])
+    offers[0]["suspect"] = True          # the quantity pass got there first
+    offers[0]["suspect_reason"] = "quantity"
+    assert flag_foreign_currencies(offers) == 0
+    assert offers[0]["suspect_reason"] == "currency"
+
+
+def test_an_even_split_keeps_the_cheaper_currency():
+    """
+    With two of each there is no majority. Break towards the currency holding
+    the cheapest offer, so the headline price stays a price someone can pay.
+    """
+    offers = _priced([(1049.00, "USD"), (1099.00, "USD"),
+                      (1199.00, "CAD"), (1249.00, "CAD")])
+    flag_foreign_currencies(offers)
+    comparable = [o for o in offers if not o["suspect"]]
+    assert {o["currency"] for o in comparable} == {"USD"}
 
 
 def test_median():
