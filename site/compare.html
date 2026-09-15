@@ -82,11 +82,28 @@ button{font-family:inherit}
 .results{display:flex;flex-direction:column;gap:10px;padding-bottom:56px}
 .card{background:var(--surface);border:1px solid var(--n300);border-radius:10px;overflow:hidden}
 .card-head{
-  display:grid;grid-template-columns:1fr auto;gap:14px;align-items:center;
+  display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;
   width:100%;text-align:left;background:transparent;border:0;color:inherit;
   padding:15px 18px;cursor:pointer;
 }
 .card-head:hover{background:var(--raised)}
+
+/* product thumbnail
+   Sellers' photography is shot on white, so the tile is light on purpose —
+   a transparent tile would leave white squares floating on a dark page. */
+.thumb{
+  width:62px;height:62px;flex:none;border-radius:8px;overflow:hidden;
+  background:#f5f4f3;border:1px solid var(--n300);
+  display:flex;align-items:center;justify-content:center;
+}
+.thumb img{width:100%;height:100%;object-fit:contain;padding:5px;display:block}
+/* No image in the feed, or one that failed to load. Naming the club type
+   beats a broken-image icon and keeps the row the same height either way. */
+.thumb.no-img{background:var(--raised);border-style:dashed;border-color:var(--n400)}
+.thumb.no-img img{display:none}
+.thumb .ph{display:none;font-size:.56rem;font-weight:700;letter-spacing:.07em;
+  text-transform:uppercase;color:var(--n600);text-align:center;line-height:1.25;padding:3px}
+.thumb.no-img .ph{display:block}
 .title{display:block;font-weight:600;font-size:1rem;letter-spacing:-.01em}
 .meta{display:block;font-size:.8rem;color:var(--n600);margin-top:3px}
 .prices{display:flex;gap:16px;align-items:baseline;justify-content:flex-end;flex-wrap:wrap}
@@ -139,8 +156,10 @@ footer{border-top:1px solid var(--n300);padding-block:22px 40px;font-size:.8rem;
 
 @media (max-width:620px){
   body{padding-inline:14px}
-  .card-head{grid-template-columns:1fr;gap:10px}
-  .prices{justify-content:flex-start}
+  /* Thumbnail stays beside the title; prices drop to their own full-width row. */
+  .card-head{grid-template-columns:auto 1fr;gap:12px;padding:13px 14px}
+  .prices{justify-content:flex-start;grid-column:1 / -1}
+  .thumb{width:54px;height:54px}
   th,td{padding:10px 14px}
 }
 @media (prefers-reduced-motion:reduce){*{transition-duration:.01ms!important;animation-duration:.01ms!important}}
@@ -280,9 +299,18 @@ footer{border-top:1px solid var(--n300);padding-block:22px 40px;font-size:.8rem;
 
     var lowBadge = p.is_low ? '<span class="badge low">Lowest in 90 days</span>' : "";
 
+    // The photo sits next to the title, so alt text would only repeat it.
+    // referrerpolicy matters: the image hosts serve nothing without it.
+    var ph = '<span class="ph">' + esc(TYPE_LABEL[p.type] || "Club") + '</span>';
+    var thumb = p.image
+      ? '<span class="thumb"><img src="' + esc(p.image) + '" alt="" loading="lazy" ' +
+        'decoding="async" referrerpolicy="no-referrer">' + ph + '</span>'
+      : '<span class="thumb no-img">' + ph + '</span>';
+
     return '' +
       '<article class="card">' +
         '<button class="card-head" type="button" data-id="' + p.id + '" aria-expanded="' + isOpen + '">' +
+          thumb +
           '<span>' +
             '<span class="title">' + esc(p.name) + lowBadge + '</span>' +
             '<span class="meta">' + esc(spec.join(" · ")) + '</span>' +
@@ -341,6 +369,16 @@ footer{border-top:1px solid var(--n300);padding-block:22px 40px;font-size:.8rem;
     }
     results.innerHTML = list.map(card).join("");
   }
+
+  // A dead image URL should degrade to the labelled tile, not a broken icon.
+  // `error` does not bubble, hence the capture phase.
+  results.addEventListener("error", function (e) {
+    var img = e.target;
+    if (img && img.tagName === "IMG") {
+      var tile = img.parentNode;
+      if (tile && tile.classList) tile.classList.add("no-img");
+    }
+  }, true);
 
   results.addEventListener("click", function (e) {
     var btn = e.target.closest(".card-head");
