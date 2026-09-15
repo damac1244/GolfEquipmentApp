@@ -64,13 +64,19 @@ BRAND_ALIASES: dict[str, list[str]] = {
 # specific types (fairway, hybrid) come before the generic ones.
 CLUB_TYPE_PATTERNS: list[tuple[str, str]] = [
     ("golf_balls", r"\b(golf\s+balls?|balls?)\b|\bdozen\b|\b1\s*dz\b"),
+    # Single irons MUST be caught before the set pattern. Retailers sell
+    # individual irons and full sets under nearly identical titles, and a
+    # $170 single iron merged into a $1,400 set produces a $1,230 "saving"
+    # that does not exist. This is the most damaging thing the matcher can
+    # get wrong, because the number looks spectacular and is a lie.
+    ("single_iron", r"\b(single|individual)\s+irons?\b|\b#?\d\s*-?\s*iron\b"
+                    r"|\b(pw|gw|aw|sw|lw)\s*(wedge\s*)?only\b"),
     ("iron_set", r"\biron\s*sets?\b|\birons\b|\b\d\s*-\s*(pw|gw|aw|sw)\b"),
     ("wedge", r"\bwedges?\b|\b(lob|sand|gap|pitching)\s+wedge\b"),
     ("putter", r"\bputters?\b"),
     ("driver", r"\bdrivers?\b"),
     ("fairway_wood", r"\bfairway\b|\b(3|5|7|9)\s*wood\b|\b(3|5|7|9)w\b|\bheavenwood\b"),
     ("hybrid", r"\bhybrids?\b|\brescue\b|\butility\b"),
-    ("single_iron", r"\b\d\s*iron\b"),
     ("bag", r"\b(stand|cart|carry|staff)\s+bag\b|\bgolf\s+bag\b"),
     ("glove", r"\bglove\b"),
     ("shoes", r"\bshoes?\b|\bfootjoy\b"),
