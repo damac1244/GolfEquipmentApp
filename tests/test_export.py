@@ -93,6 +93,27 @@ def test_leaves_genuine_bargains_alone(label, totals):
 # Edge cases
 # --------------------------------------------------------------------------
 
+@pytest.mark.parametrize("label,totals", [
+    ("Pro V1x: a bulk case among dozens",
+     [27.99, 44.99, 47.99, 49.99, 52.99, 54.99, 54.99, 56.99, 59.99, 591.44]),
+    ("a pallet of balls", [39.99, 42.99, 44.99, 47.99, 1299.00]),
+])
+def test_flags_expensive_outliers_too(label, totals):
+    """
+    The first version of this guard only looked downward. A $591 case of golf
+    balls sitting among $50 dozens then inflated the spread from the top.
+    """
+    offers = _offers(totals)
+    assert flag_quantity_outliers(offers) > 0, f"should have flagged: {label}"
+    assert offers[-1]["suspect"] is True, "the dearest is the odd one out"
+
+
+def test_new_versus_used_is_not_flagged_as_an_outlier():
+    """A new club at 3x a worn used one is a real comparison, not a mismatch."""
+    offers = _offers([299.00, 420.00, 520.00, 649.99])
+    assert flag_quantity_outliers(offers) == 0
+
+
 def test_single_offer_is_never_flagged():
     offers = _offers([499.00])
     assert flag_quantity_outliers(offers) == 0

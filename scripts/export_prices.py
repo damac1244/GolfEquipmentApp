@@ -48,6 +48,16 @@ SIZE_WARN_MB = 2.0
 # than showing it honestly labelled.
 QUANTITY_OUTLIER_RATIO = 0.5
 
+# And the same problem at the other end. Observed live: Titleist Pro V1x golf
+# balls listed from $27.99 to $591.44 — the $591 being a bulk case, not a
+# dozen. The first version of this guard only looked downward, so an expensive
+# mismatch sailed through and inflated the spread from the top instead.
+#
+# 3x the median is deliberately loose: a new club really can cost three times a
+# well-worn used one, and that is a comparison worth showing. Beyond 3x you are
+# almost always looking at a different quantity.
+QUANTITY_OUTLIER_HIGH = 3.0
+
 # Below this many offers a median means little, so small groups use the rule
 # below instead of being left unchecked. Leaving them unchecked was the first
 # attempt, and it let a 2-seller product through at $137 against $1,057.
@@ -87,17 +97,23 @@ def flag_quantity_outliers(offers: list[dict]) -> int:
 
     if len(totals) >= MIN_OFFERS_FOR_MEDIAN:
         reference = median(totals)
-        threshold = reference * QUANTITY_OUTLIER_RATIO
+        low = reference * QUANTITY_OUTLIER_RATIO
+        high = reference * QUANTITY_OUTLIER_HIGH
     else:
+        # With two or three offers there is no meaningful middle, and no way to
+        # tell which end is the odd one out. Compare against the dearest and
+        # flag only the bottom -- the safer guess, since a mismatched single
+        # club is far more common than a mismatched bulk case.
         reference = max(totals)
-        threshold = reference * SMALL_GROUP_MAX_RATIO
+        low = reference * SMALL_GROUP_MAX_RATIO
+        high = float("inf")
 
     if reference <= 0:
         return 0
 
     flagged = 0
     for o in offers:
-        if o["total"] < threshold:
+        if o["total"] < low or o["total"] > high:
             o["suspect"] = True
             flagged += 1
 
