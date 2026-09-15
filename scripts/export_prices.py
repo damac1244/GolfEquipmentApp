@@ -49,7 +49,7 @@ SIZE_WARN_MB = 2.0
 QUANTITY_OUTLIER_RATIO = 0.5
 
 # Below this many offers a median means little, so no flagging.
-MIN_OFFERS_FOR_OUTLIER_CHECK = 4
+MIN_OFFERS_FOR_OUTLIER_CHECK = 2
 
 
 def median(values: list[float]) -> float:
