@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bagdrop</title>
+<meta name="description" content="New and used golf equipment, priced side by side, with condition made comparable.">
+<meta name="theme-color" content="#131211">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&display=swap">
+<style>
+:root{
+  --bg:#131211;
+  --surface:#1c1b1a;
+  --raised:#2a2827;
+  --text:#f3f2f2;
+  --n800:#d3d0cf;
+  --n700:#adaaa9;
+  --n600:#8d8988;
+  --n500:#6e6a69;
+  --n400:#514e4d;
+  --n300:#3b3938;
+  --n200:#302e2d;
+  --new:#5b86ff;
+  --new-dim:#152249;
+  --used:#35e0a1;
+  --used-100:#0e2a20;
+  --used-300:#155c43;
+  --deep:#06251a;
+  --font:"Archivo","Helvetica Neue",Arial,sans-serif;
+  --wrap:1060px;
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--font);
+  font-size:17px;
+  line-height:1.6;
+  padding-inline:20px;
+  padding-block:0;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:var(--wrap);margin-inline:auto}
+h1,h2,h3{margin:0;text-wrap:balance;line-height:1.06;font-weight:700}
+h1{font-size:clamp(2.5rem,6.5vw,4.4rem);letter-spacing:-.028em}
+h2{font-size:clamp(1.55rem,3.2vw,2.25rem);letter-spacing:-.02em}
+h3{font-size:1.02rem;font-weight:600;letter-spacing:-.005em}
+p{margin:0}
+a{color:var(--used);text-underline-offset:3px}
+a:hover{color:var(--text)}
+:focus-visible{outline:2px solid var(--used);outline-offset:3px;border-radius:2px}
+
+.eyebrow{
+  font-size:.7rem;font-weight:600;letter-spacing:.15em;
+  text-transform:uppercase;color:var(--n600);
+}
+.lede{font-size:clamp(1.02rem,1.9vw,1.16rem);color:var(--n700);max-width:58ch}
+.num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+
+/* ── masthead ─────────────────────────────────────────────── */
+.masthead{
+  display:flex;align-items:center;justify-content:space-between;
+  gap:16px;flex-wrap:wrap;padding-block:24px 0;
+}
+.mark{
+  display:flex;align-items:center;gap:9px;
+  font-weight:700;font-size:1.16rem;letter-spacing:.15em;text-transform:uppercase;
+}
+.chip{width:11px;height:11px;border-radius:2px;background:var(--used);flex:none}
+.status-pill{
+  font-size:.7rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--n600);border:1px solid var(--n300);border-radius:999px;padding:5px 11px;
+}
+
+/* ── hero ─────────────────────────────────────────────────── */
+.hero{padding-block:clamp(52px,9vw,92px) 44px;display:flex;flex-direction:column;gap:24px}
+.hero h1 em{font-style:normal;color:var(--used);display:block}
+
+/* legend: the colour system, stated once */
+.legend{display:flex;gap:20px;flex-wrap:wrap;align-items:center}
+.key{display:flex;align-items:center;gap:8px;font-size:.83rem;color:var(--n700)}
+.dot{width:9px;height:9px;border-radius:50%;flex:none}
+.dot.new{background:var(--new)}
+.dot.used{background:var(--used)}
+
+/* ── signup ───────────────────────────────────────────────── */
+.signup{display:flex;flex-direction:column;gap:10px;max-width:470px}
+.signup-row{display:flex;gap:8px;flex-wrap:wrap}
+.signup input{
+  flex:1 1 230px;min-width:0;
+  font-family:var(--font);font-size:1rem;color:var(--text);
+  background:var(--surface);
+  border:1px solid var(--n300);border-radius:7px;padding:13px 15px;
+}
+.signup input::placeholder{color:var(--n500)}
+.signup input:focus-visible{border-color:var(--used)}
+.signup button{
+  font-family:var(--font);font-size:1rem;font-weight:600;
+  background:var(--used);color:var(--deep);
+  border:1px solid var(--used);border-radius:7px;
+  padding:13px 24px;cursor:pointer;transition:opacity .15s ease;
+}
+.signup button:hover{opacity:.86}
+.note{font-size:.85rem;color:var(--n600)}
+.note[data-state="err"]{color:var(--new)}
+
+/* ── the board ────────────────────────────────────────────── */
+.board{
+  background:var(--surface);
+  border:1px solid var(--n300);border-radius:10px;overflow:hidden;
+}
+.board-head{
+  display:flex;align-items:flex-start;justify-content:space-between;
+  gap:14px;flex-wrap:wrap;padding:17px 20px;
+  border-bottom:1px solid var(--n300);
+}
+.club{font-weight:600;font-size:1.06rem}
+.spec{font-size:.83rem;color:var(--n600);margin-top:2px}
+.tag{
+  font-size:.66rem;font-weight:700;letter-spacing:.11em;text-transform:uppercase;
+  color:var(--n700);border:1px solid var(--n400);border-radius:999px;
+  padding:5px 10px;white-space:nowrap;
+}
+.scroller{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:580px}
+th,td{text-align:left;padding:14px 20px;border-bottom:1px solid var(--n200)}
+tbody tr:last-child td{border-bottom:0}
+th{
+  font-size:.67rem;font-weight:700;letter-spacing:.11em;text-transform:uppercase;
+  color:var(--n600);padding-block:12px;background:var(--raised);
+}
+th.r{text-align:right}
+td.r{text-align:right}
+.seller{font-weight:500}
+.cond{font-size:.82rem;color:var(--n600)}
+.price{font-size:1.06rem;font-weight:700;white-space:nowrap}
+.price.is-new{color:var(--new)}
+.price.is-used{color:var(--used)}
+.delta{font-size:.8rem;color:var(--n600);white-space:nowrap}
+tr.best td{background:var(--used-100)}
+tr.best{box-shadow:inset 2px 0 0 var(--used)}
+.badge{
+  display:inline-block;font-size:.63rem;font-weight:700;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--deep);background:var(--used);
+  border-radius:3px;padding:3px 7px;margin-left:9px;vertical-align:1px;
+}
+.board-foot{padding:14px 20px;background:var(--raised);font-size:.85rem;color:var(--n700)}
+
+/* ── sections ─────────────────────────────────────────────── */
+section{padding-block:clamp(48px,7vw,76px)}
+.stack{display:flex;flex-direction:column;gap:20px}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(235px,1fr));gap:30px}
+.col h3{margin-bottom:7px}
+.col p{color:var(--n700);font-size:.94rem}
+.rule{border:0;border-top:1px solid var(--n300);margin:0}
+
+/* ── build status ─────────────────────────────────────────── */
+.status{list-style:none;padding:0;margin:0;display:flex;flex-direction:column}
+.status li{
+  display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:baseline;
+  padding-block:14px;border-bottom:1px solid var(--n200);
+}
+.status li:last-child{border-bottom:0}
+.state{
+  font-size:.64rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  border:1px solid var(--n400);border-radius:999px;padding:4px 10px;
+  color:var(--n600);white-space:nowrap;min-width:64px;text-align:center;
+}
+.state.done{color:var(--used);border-color:var(--used-300);background:var(--used-100)}
+.state.now{color:var(--new);border-color:var(--new-dim);background:var(--new-dim)}
+.status p{font-size:.95rem}
+.status .sub{color:var(--n600);font-size:.87rem;margin-top:2px}
+
+/* ── footer ───────────────────────────────────────────────── */
+footer{
+  border-top:1px solid var(--n300);padding-block:30px 44px;
+  display:flex;flex-direction:column;gap:14px;font-size:.85rem;color:var(--n600);
+}
+.disclosure{max-width:64ch}
+.foot-row{display:flex;gap:20px;flex-wrap:wrap;align-items:center}
+
+@media (max-width:560px){
+  body{font-size:16px;padding-inline:16px}
+  th,td{padding:12px 14px}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:.01ms!important;transition-duration:.01ms!important}
+}
+
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="mark"><span class="chip"></span>Bagdrop</div>
+    <div class="status-pill">In development</div>
+  </header>
+
+  <div class="hero">
+    <p class="eyebrow">New &amp; used, side by side</p>
+    <h1>Someone else already <em>broke it in.</em></h1>
+    <p class="lede">Bagdrop shows the new price and the used price for the same club in one row &mdash; with the condition, the seller, and how fresh the number is.</p>
+
+    <div class="legend">
+      <span class="key"><span class="dot new"></span>New</span>
+      <span class="key"><span class="dot used"></span>Used</span>
+    </div>
+
+    <form class="signup" id="signup" novalidate>
+      <div class="signup-row">
+        <label for="email" style="position:absolute;left:-9999px">Email address</label>
+        <input type="email" id="email" name="email" placeholder="you@example.com" autocomplete="email" required>
+        <button type="submit">Tell me when it's live</button>
+      </div>
+      <p class="note" id="note">No spam, no newsletter. One email when the search works.</p>
+    </form>
+  </div>
+
+  <hr class="rule">
+
+  <section>
+    <div class="stack">
+      <p class="eyebrow">What it looks like</p>
+      <h2>One club. Every seller. One row each.</h2>
+
+      <div class="board">
+        <div class="board-head">
+          <div>
+            <div class="club">TaylorMade Qi35 Driver</div>
+            <div class="spec">10.5&deg; &middot; Stiff &middot; RH &middot; Ventus Blue</div>
+          </div>
+          <div class="tag">Example layout &mdash; not live pricing</div>
+        </div>
+
+        <div class="scroller">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Seller</th>
+                <th scope="col">Condition</th>
+                <th scope="col" class="r">Total</th>
+                <th scope="col" class="r">vs new</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="seller">Retailer A</td>
+                <td class="cond">New &middot; full warranty</td>
+                <td class="r"><span class="price is-new num">$549.99</span></td>
+                <td class="r"><span class="delta">&mdash;</span></td>
+              </tr>
+              <tr>
+                <td class="seller">Retailer B</td>
+                <td class="cond">New &middot; open box</td>
+                <td class="r"><span class="price is-new num">$489.00</span></td>
+                <td class="r"><span class="delta num">&minus;11%</span></td>
+              </tr>
+              <tr class="best">
+                <td class="seller">Marketplace seller<span class="badge">Best</span></td>
+                <td class="cond">Used &middot; Excellent</td>
+                <td class="r"><span class="price is-used num">$379.00</span></td>
+                <td class="r"><span class="delta num">&minus;31%</span></td>
+              </tr>
+              <tr>
+                <td class="seller">Trade-in specialist</td>
+                <td class="cond">Used &middot; Very Good</td>
+                <td class="r"><span class="price is-used num">$339.00</span></td>
+                <td class="r"><span class="delta num">&minus;38%</span></td>
+              </tr>
+              <tr>
+                <td class="seller">Marketplace seller</td>
+                <td class="cond">Used &middot; Good &middot; sky mark</td>
+                <td class="r"><span class="price is-used num">$298.50</span></td>
+                <td class="r"><span class="delta num">&minus;46%</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="board-foot">Totals include shipping. Condition wording is normalised across sellers, so &ldquo;Excellent&rdquo; means the same thing in every row.</div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="rule">
+
+  <section>
+    <div class="stack">
+      <p class="eyebrow">Why this is hard</p>
+      <h2>Used clubs aren't products. They're one-offs.</h2>
+      <div class="cols">
+        <div class="col">
+          <h3>Every listing is different</h3>
+          <p>Ten shops sell the identical new driver. No two used ones match &mdash; different wear, different shaft, different story. Lining them up is the whole problem.</p>
+        </div>
+        <div class="col">
+          <h3>&ldquo;Excellent&rdquo; means five things</h3>
+          <p>One seller's Excellent is another's Good. We map each seller's grades onto one scale, and say what the words actually describe: face wear, sky marks, shaft ticks.</p>
+        </div>
+        <div class="col">
+          <h3>The real number is the total</h3>
+          <p>A cheaper club with $29 shipping isn't cheaper. Every price here is what leaves your account, ranked on that and nothing else.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="rule">
+
+  <section>
+    <div class="stack">
+      <p class="eyebrow">Where it's up to</p>
+      <h2>Built in the open.</h2>
+      <p class="lede">This page is honest about what exists. Here's the actual state of it.</p>
+      <ul class="status">
+        <li>
+          <span class="state done">Done</span>
+          <div>
+            <p>Price engine and club matcher</p>
+            <p class="sub">Collapses the same club listed six different ways into one comparable row.</p>
+          </div>
+        </li>
+        <li>
+          <span class="state now">Now</span>
+          <div>
+            <p>Condition grading across sellers</p>
+            <p class="sub">Rebuilding the matcher for used gear, where every item is a one-off.</p>
+          </div>
+        </li>
+        <li>
+          <span class="state">Next</span>
+          <div>
+            <p>Seller data partnerships</p>
+            <p class="sub">Applications in progress. Real prices depend on these being approved.</p>
+          </div>
+        </li>
+        <li>
+          <span class="state">Then</span>
+          <div>
+            <p>Search goes live</p>
+            <p class="sub">Everyone on the email list hears first.</p>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <footer>
+    <div class="mark"><span class="chip"></span>Bagdrop</div>
+    <p class="disclosure">Bagdrop is not yet live and shows no real prices. When it launches, we expect to earn a commission on some purchases made through outbound links. That will never affect how results are ranked &mdash; ordering is by total price paid, and nothing else.</p>
+    <div class="foot-row">
+      <span>&copy; 2026 Bagdrop</span>
+      <a href="mailto:hello@thebagdropgolf.com">hello@thebagdropgolf.com</a>
+    </div>
+  </footer>
+
+</div>
+
+<script>
+/* Your Formspree form. */
+const SIGNUP_ENDPOINT = "https://formspree.io/f/xbgjqpog";
+
+const form = document.getElementById("signup");
+const note = document.getElementById("note");
+const email = document.getElementById("email");
+
+function say(msg, state){
+  note.textContent = msg;
+  if(state){ note.setAttribute("data-state", state); }
+  else { note.removeAttribute("data-state"); }
+}
+
+form.addEventListener("submit", async function(e){
+  e.preventDefault();
+  const value = email.value.trim();
+
+  if(!value || !email.checkValidity()){
+    say("That doesn't look like an email address. Check it and try again.", "err");
+    email.focus();
+    return;
+  }
+  if(!SIGNUP_ENDPOINT){
+    say("Signup isn't connected yet — set SIGNUP_ENDPOINT in index.html.", "err");
+    return;
+  }
+
+  say("Adding you…");
+  try{
+    const res = await fetch(SIGNUP_ENDPOINT, {
+      method: "POST",
+      headers: { "Accept": "application/json", "Content-Type": "application/json" },
+      body: JSON.stringify({ email: value })
+    });
+    if(!res.ok) throw new Error(res.status);
+    form.reset();
+    say("You're on the list. We'll email you once, when search works.");
+  }catch(err){
+    say("That didn't save. Try again in a moment, or email hello@thebagdropgolf.com.", "err");
+  }
+});
+</script>
+
+</body>
+</html>

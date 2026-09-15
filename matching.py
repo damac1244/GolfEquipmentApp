@@ -69,12 +69,7 @@ CLUB_TYPE_PATTERNS: list[tuple[str, str]] = [
     # $170 single iron merged into a $1,400 set produces a $1,230 "saving"
     # that does not exist. This is the most damaging thing the matcher can
     # get wrong, because the number looks spectacular and is a lie.
-    # The bare singular "Iron" is the common case and the easy one to miss:
-    # "TaylorMade P790 Iron" at $149 sits right beside "P790 Irons" at $1,399.
-    # The negative lookahead keeps "Iron Set" out of this bucket -- without it
-    # every set in the catalogue would be classified as a single club.
     ("single_iron", r"\b(single|individual)\s+irons?\b|\b#?\d\s*-?\s*iron\b"
-                    r"|\biron\b(?!\s*sets?\b)"
                     r"|\b(pw|gw|aw|sw|lw)\s*(wedge\s*)?only\b"),
     ("iron_set", r"\biron\s*sets?\b|\birons\b|\b\d\s*-\s*(pw|gw|aw|sw)\b"),
     ("wedge", r"\bwedges?\b|\b(lob|sand|gap|pitching)\s+wedge\b"),

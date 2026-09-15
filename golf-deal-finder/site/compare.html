@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bagdrop — Compare</title>
+<meta name="description" content="New and used golf equipment prices, side by side, ranked by total.">
+<meta name="theme-color" content="#131211">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&display=swap">
+<style>
+:root{
+  --bg:#131211;
+  --surface:#1c1b1a;
+  --raised:#2a2827;
+  --text:#f3f2f2;
+  --n800:#d3d0cf;
+  --n700:#adaaa9;
+  --n600:#8d8988;
+  --n500:#6e6a69;
+  --n400:#514e4d;
+  --n300:#3b3938;
+  --n200:#302e2d;
+  --new:#5b86ff;
+  --new-dim:#152249;
+  --used:#35e0a1;
+  --used-100:#0e2a20;
+  --used-300:#155c43;
+  --deep:#06251a;
+  --font:"Archivo","Helvetica Neue",Arial,sans-serif;
+  --wrap:1100px;
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;background:var(--bg);color:var(--text);font-family:var(--font);
+  font-size:16px;line-height:1.55;padding-inline:20px;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:var(--wrap);margin-inline:auto}
+h1,h2{margin:0;line-height:1.08;font-weight:700;letter-spacing:-.02em}
+h1{font-size:clamp(1.8rem,4vw,2.6rem)}
+p{margin:0}
+a{color:var(--used);text-underline-offset:3px}
+button{font-family:inherit}
+:focus-visible{outline:2px solid var(--used);outline-offset:2px;border-radius:3px}
+.num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+.eyebrow{font-size:.68rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--n600)}
+
+/* header */
+.masthead{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding-block:22px}
+.mark{display:flex;align-items:center;gap:9px;font-weight:700;font-size:1.1rem;letter-spacing:.15em;text-transform:uppercase;color:var(--text);text-decoration:none}
+.chip{width:10px;height:10px;border-radius:2px;background:var(--used);flex:none}
+.freshness{font-size:.76rem;color:var(--n600)}
+
+/* search */
+.searchbar{display:flex;gap:8px;flex-wrap:wrap;margin-block:6px 14px}
+.searchbar input{
+  flex:1 1 280px;min-width:0;font-size:1.02rem;color:var(--text);
+  background:var(--surface);border:1px solid var(--n300);border-radius:8px;padding:13px 15px;
+}
+.searchbar input::placeholder{color:var(--n500)}
+.searchbar input:focus-visible{border-color:var(--used)}
+
+.filters{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:18px}
+.pill{
+  font-size:.8rem;font-weight:500;color:var(--n700);background:transparent;
+  border:1px solid var(--n300);border-radius:999px;padding:6px 13px;cursor:pointer;
+}
+.pill[aria-pressed="true"]{color:var(--deep);background:var(--used);border-color:var(--used);font-weight:600}
+
+.summary{display:flex;gap:18px;flex-wrap:wrap;font-size:.83rem;color:var(--n600);margin-bottom:14px}
+.legend{display:flex;gap:7px;align-items:center}
+.dot{width:8px;height:8px;border-radius:50%;flex:none}
+.dot.new{background:var(--new)}
+.dot.used{background:var(--used)}
+
+/* result cards */
+.results{display:flex;flex-direction:column;gap:10px;padding-bottom:56px}
+.card{background:var(--surface);border:1px solid var(--n300);border-radius:10px;overflow:hidden}
+.card-head{
+  display:grid;grid-template-columns:1fr auto;gap:14px;align-items:center;
+  width:100%;text-align:left;background:transparent;border:0;color:inherit;
+  padding:15px 18px;cursor:pointer;
+}
+.card-head:hover{background:var(--raised)}
+.title{display:block;font-weight:600;font-size:1rem;letter-spacing:-.01em}
+.meta{display:block;font-size:.8rem;color:var(--n600);margin-top:3px}
+.prices{display:flex;gap:16px;align-items:baseline;justify-content:flex-end;flex-wrap:wrap}
+.pblock{text-align:right;min-width:78px}
+.plabel{font-size:.62rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--n600)}
+.pval{font-size:1.08rem;font-weight:700;white-space:nowrap}
+.pval.is-new{color:var(--new)}
+.pval.is-used{color:var(--used)}
+.pval.none{color:var(--n500);font-weight:500;font-size:.9rem}
+.save{font-size:.76rem;color:var(--n600);white-space:nowrap}
+.chev{color:var(--n500);font-size:.8rem;margin-left:4px}
+
+.badge{display:inline-block;font-size:.6rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;border-radius:3px;padding:3px 7px;margin-left:8px;vertical-align:2px}
+.badge.low{color:var(--deep);background:var(--used)}
+
+/* offer table */
+.detail{border-top:1px solid var(--n300);background:var(--bg)}
+.scroller{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:560px}
+th,td{text-align:left;padding:11px 18px;border-bottom:1px solid var(--n200)}
+tbody tr:last-child td{border-bottom:0}
+th{font-size:.64rem;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--n600);background:var(--raised)}
+th.r,td.r{text-align:right}
+.seller{font-weight:500;font-size:.94rem}
+.cond{font-size:.8rem;color:var(--n600)}
+.total{font-weight:700;white-space:nowrap}
+.total.is-new{color:var(--new)}
+.total.is-used{color:var(--used)}
+.ship{font-size:.75rem;color:var(--n600)}
+tr.best td{background:var(--used-100)}
+tr.best{box-shadow:inset 2px 0 0 var(--used)}
+.go{
+  display:inline-block;font-size:.78rem;font-weight:600;text-decoration:none;
+  color:var(--deep);background:var(--used);border-radius:5px;padding:6px 13px;white-space:nowrap;
+}
+.go:hover{opacity:.87;color:var(--deep)}
+.foot-note{padding:11px 18px;font-size:.78rem;color:var(--n600);background:var(--raised)}
+
+/* states */
+.state{
+  border:1px dashed var(--n400);border-radius:10px;padding:38px 24px;text-align:center;
+  display:flex;flex-direction:column;gap:10px;align-items:center;
+}
+.state h2{font-size:1.15rem}
+.state p{color:var(--n600);font-size:.92rem;max-width:48ch}
+.state code{background:var(--raised);padding:2px 6px;border-radius:4px;font-size:.85em}
+
+footer{border-top:1px solid var(--n300);padding-block:22px 40px;font-size:.8rem;color:var(--n600);display:flex;flex-direction:column;gap:9px}
+.disclosure{max-width:66ch}
+
+@media (max-width:620px){
+  body{padding-inline:14px}
+  .card-head{grid-template-columns:1fr;gap:10px}
+  .prices{justify-content:flex-start}
+  th,td{padding:10px 14px}
+}
+@media (prefers-reduced-motion:reduce){*{transition-duration:.01ms!important;animation-duration:.01ms!important}}
+
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <a class="mark" href="/"><span class="chip"></span>Bagdrop</a>
+    <span class="freshness" id="freshness">Loading prices…</span>
+  </header>
+
+  <h1>Every seller, one row each.</h1>
+
+  <div class="searchbar">
+    <label for="q" style="position:absolute;left:-9999px">Search for a club</label>
+    <input type="search" id="q" placeholder="Search a club — try “driver” or “Qi35”" autocomplete="off">
+  </div>
+
+  <div class="filters" id="filters">
+    <button class="pill" type="button" data-type="" aria-pressed="true">All</button>
+    <button class="pill" type="button" data-type="driver" aria-pressed="false">Drivers</button>
+    <button class="pill" type="button" data-type="iron_set" aria-pressed="false">Irons</button>
+    <button class="pill" type="button" data-type="wedge" aria-pressed="false">Wedges</button>
+    <button class="pill" type="button" data-type="putter" aria-pressed="false">Putters</button>
+    <button class="pill" type="button" data-type="fairway_wood" aria-pressed="false">Fairways</button>
+    <button class="pill" type="button" data-type="hybrid" aria-pressed="false">Hybrids</button>
+    <button class="pill" type="button" data-type="golf_balls" aria-pressed="false">Balls</button>
+  </div>
+
+  <div class="summary">
+    <span id="count">—</span>
+    <span class="legend"><span class="dot new"></span>New</span>
+    <span class="legend"><span class="dot used"></span>Used</span>
+  </div>
+
+  <div class="results" id="results"></div>
+
+  <footer>
+    <p class="disclosure">Ranked by total price including shipping, and nothing else.
+    Some links earn us a commission; that never changes the order.</p>
+    <p>&copy; 2026 Bagdrop &middot; <a href="mailto:hello@thebagdropgolf.com">hello@thebagdropgolf.com</a></p>
+  </footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var results  = document.getElementById("results");
+  var countEl  = document.getElementById("count");
+  var freshEl  = document.getElementById("freshness");
+  var qInput   = document.getElementById("q");
+  var filters  = document.getElementById("filters");
+
+  var DATA = null;
+  var typeFilter = "";
+  var open = {};   // product id -> expanded
+
+  var TYPE_LABEL = {
+    driver: "Driver", fairway_wood: "Fairway", hybrid: "Hybrid",
+    iron_set: "Irons", single_iron: "Iron", wedge: "Wedge",
+    putter: "Putter", golf_balls: "Balls"
+  };
+
+  function money(n) {
+    if (n === null || n === undefined) return "—";
+    return "$" + n.toFixed(2);
+  }
+
+  function esc(s) {
+    return String(s === null || s === undefined ? "" : s)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function ago(iso) {
+    var then = new Date(iso);
+    if (isNaN(then)) return "";
+    var mins = Math.round((Date.now() - then.getTime()) / 60000);
+    if (mins < 60) return mins + " min ago";
+    var hrs = Math.round(mins / 60);
+    if (hrs < 24) return hrs + (hrs === 1 ? " hour ago" : " hours ago");
+    var days = Math.round(hrs / 24);
+    return days + (days === 1 ? " day ago" : " days ago");
+  }
+
+  function emptyState(title, body) {
+    results.innerHTML =
+      '<div class="state"><h2>' + title + '</h2><p>' + body + '</p></div>';
+  }
+
+  function conditionText(o) {
+    if (o.condition === "new") return "New";
+    var base = o.condition === "open_box" ? "Open box"
+             : o.condition === "refurbished" ? "Refurbished"
+             : o.condition === "demo" ? "Demo" : "Used";
+    return o.grade ? base + " · " + o.grade : base;
+  }
+
+  function offerRows(p) {
+    var best = p.offers[0];
+    var html = "";
+    for (var i = 0; i < p.offers.length; i++) {
+      var o = p.offers[i];
+      var isNew = o.condition === "new";
+      var cls = isNew ? "is-new" : "is-used";
+      var ship = o.shipping === null || o.shipping === undefined
+        ? '<span class="ship">+ shipping unknown</span>'
+        : (o.shipping > 0 ? '<span class="ship">incl. ' + money(o.shipping) + ' shipping</span>' : '<span class="ship">free shipping</span>');
+
+      html +=
+        '<tr' + (o === best ? ' class="best"' : '') + '>' +
+          '<td><span class="seller">' + esc(o.retailer) + '</span></td>' +
+          '<td><span class="cond">' + conditionText(o) + '</span></td>' +
+          '<td class="r"><span class="total ' + cls + ' num">' + money(o.total) + '</span><br>' + ship + '</td>' +
+          '<td class="r"><a class="go" href="' + esc(o.url) + '" target="_blank" rel="nofollow noopener sponsored">View</a></td>' +
+        '</tr>';
+    }
+    return html;
+  }
+
+  function card(p) {
+    var isOpen = !!open[p.id];
+    // The title already carries brand, model, loft, flex and dexterity.
+    // Repeating them here wastes the line — say what the title cannot.
+    var usedCount = p.offers.filter(function (o) { return o.condition !== "new"; }).length;
+    var spec = [p.retailers + (p.retailers === 1 ? " seller" : " sellers")];
+    if (usedCount) {
+      spec.push(usedCount + " used listing" + (usedCount === 1 ? "" : "s"));
+    } else {
+      spec.push("new only");
+    }
+    if (p.spread_pct >= 15) spec.push(p.spread_pct + "% between cheapest and dearest");
+
+    var lowBadge = p.is_low ? '<span class="badge low">Lowest in 90 days</span>' : "";
+
+    return '' +
+      '<article class="card">' +
+        '<button class="card-head" type="button" data-id="' + p.id + '" aria-expanded="' + isOpen + '">' +
+          '<span>' +
+            '<span class="title">' + esc(p.name) + lowBadge + '</span>' +
+            '<span class="meta">' + esc(spec.join(" · ")) + '</span>' +
+          '</span>' +
+          '<span class="prices">' +
+            '<span class="pblock">' +
+              '<span class="plabel">New from</span><br>' +
+              (p.new_from !== null && p.new_from !== undefined
+                ? '<span class="pval is-new num">' + money(p.new_from) + '</span>'
+                : '<span class="pval none">—</span>') +
+            '</span>' +
+            '<span class="pblock">' +
+              '<span class="plabel">Used from</span><br>' +
+              (p.used_from !== null && p.used_from !== undefined
+                ? '<span class="pval is-used num">' + money(p.used_from) + '</span>'
+                : '<span class="pval none">none listed</span>') +
+            '</span>' +
+            '<span class="pblock">' +
+              '<span class="plabel">Spread</span><br>' +
+              '<span class="save num">' + money(p.spread) + '</span>' +
+            '</span>' +
+            '<span class="chev">' + (isOpen ? "▲" : "▼") + '</span>' +
+          '</span>' +
+        '</button>' +
+        (isOpen
+          ? '<div class="detail"><div class="scroller"><table>' +
+              '<thead><tr><th scope="col">Seller</th><th scope="col">Condition</th>' +
+              '<th scope="col" class="r">Total</th><th scope="col" class="r"></th></tr></thead>' +
+              '<tbody>' + offerRows(p) + '</tbody></table></div>' +
+              '<div class="foot-note">Totals include shipping where the seller states it. ' +
+              'Condition wording is normalised across sellers.</div></div>'
+          : "") +
+      '</article>';
+  }
+
+  function render() {
+    if (!DATA) return;
+    var q = qInput.value.trim().toLowerCase();
+    var words = q ? q.split(/\s+/) : [];
+
+    var list = DATA.products.filter(function (p) {
+      if (typeFilter && p.type !== typeFilter) return false;
+      if (!words.length) return true;
+      var hay = (p.name + " " + (p.brand || "") + " " + (p.model || "")).toLowerCase();
+      return words.every(function (w) { return hay.indexOf(w) !== -1; });
+    });
+
+    countEl.textContent = list.length
+      ? list.length + (list.length === 1 ? " club" : " clubs")
+      : "No matches";
+
+    if (!list.length) {
+      emptyState("Nothing matched that.",
+        "Try a brand or a model name — &ldquo;Ping&rdquo;, &ldquo;Qi35&rdquo;, &ldquo;Pro V1&rdquo; — or clear the filters.");
+      return;
+    }
+    results.innerHTML = list.map(card).join("");
+  }
+
+  results.addEventListener("click", function (e) {
+    var btn = e.target.closest(".card-head");
+    if (!btn) return;
+    var id = btn.getAttribute("data-id");
+    open[id] = !open[id];
+    render();
+  });
+
+  filters.addEventListener("click", function (e) {
+    var btn = e.target.closest(".pill");
+    if (!btn) return;
+    typeFilter = btn.getAttribute("data-type") || "";
+    Array.prototype.forEach.call(filters.querySelectorAll(".pill"), function (b) {
+      b.setAttribute("aria-pressed", b === btn ? "true" : "false");
+    });
+    render();
+  });
+
+  var timer;
+  qInput.addEventListener("input", function () {
+    clearTimeout(timer);
+    timer = setTimeout(render, 120);
+  });
+
+  fetch("prices.json", { cache: "no-cache" })
+    .then(function (r) {
+      if (!r.ok) throw new Error(r.status);
+      return r.json();
+    })
+    .then(function (d) {
+      DATA = d;
+      freshEl.textContent = "Prices updated " + ago(d.generated_at) +
+        " · " + d.retailer_count + " sellers";
+      render();
+    })
+    .catch(function () {
+      freshEl.textContent = "No prices yet";
+      countEl.textContent = "—";
+      emptyState(
+        "No prices loaded yet.",
+        "This page reads <code>prices.json</code>, which the price engine produces. " +
+        "Once the first refresh has run, results appear here automatically — " +
+        "nothing on this page needs changing."
+      );
+    });
+})();
+</script>
+
+</body>
+</html>

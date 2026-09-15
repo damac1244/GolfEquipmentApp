@@ -48,21 +48,8 @@ SIZE_WARN_MB = 2.0
 # than showing it honestly labelled.
 QUANTITY_OUTLIER_RATIO = 0.5
 
-# Below this many offers a median means little, so small groups use the rule
-# below instead of being left unchecked. Leaving them unchecked was the first
-# attempt, and it let a 2-seller product through at $137 against $1,057.
-MIN_OFFERS_FOR_MEDIAN = 4
-
-# Small-group rule: with only 2-3 offers there is no meaningful middle, so
-# compare against the dearest instead. Anything under this fraction of the most
-# expensive offer is treated as a different item.
-#
-# Calibrated against real golf pricing: the legitimate range for one club
-# across sellers — new at full price down to a well-worn used copy — tops out
-# around 3x. Beyond that you are looking at a single iron in a set's listing,
-# a head-only, or a shaft. 0.35 sits just past 3x and leaves genuine used
-# bargains alone.
-SMALL_GROUP_MAX_RATIO = 0.35
+# Below this many offers a median means little, so no flagging.
+MIN_OFFERS_FOR_OUTLIER_CHECK = 4
 
 
 def median(values: list[float]) -> float:
@@ -81,32 +68,18 @@ def flag_quantity_outliers(offers: list[dict]) -> int:
     for o in offers:
         o["suspect"] = False
 
-    totals = [o["total"] for o in offers]
-    if len(totals) < 2:
+    if len(offers) < MIN_OFFERS_FOR_OUTLIER_CHECK:
         return 0
 
-    if len(totals) >= MIN_OFFERS_FOR_MEDIAN:
-        reference = median(totals)
-        threshold = reference * QUANTITY_OUTLIER_RATIO
-    else:
-        reference = max(totals)
-        threshold = reference * SMALL_GROUP_MAX_RATIO
-
-    if reference <= 0:
+    mid = median([o["total"] for o in offers])
+    if mid <= 0:
         return 0
 
     flagged = 0
     for o in offers:
-        if o["total"] < threshold:
+        if o["total"] < mid * QUANTITY_OUTLIER_RATIO:
             o["suspect"] = True
             flagged += 1
-
-    # Never flag everything -- if each offer is below the threshold the
-    # threshold is wrong, not the data.
-    if flagged == len(offers):
-        for o in offers:
-            o["suspect"] = False
-        return 0
     return flagged
 
 
@@ -122,7 +95,7 @@ def build(conn: sqlite3.Connection, min_offers: int, include_used: bool) -> dict
     for p in rows:
         sql = """
             SELECT retailer, source, condition, grade, price, shipping, url,
-                   commission_rate, rating, rating_count, last_seen
+                   commission_rate, last_seen
               FROM offers WHERE product_id = ?
         """
         params: list = [p["id"]]
@@ -145,8 +118,6 @@ def build(conn: sqlite3.Connection, min_offers: int, include_used: bool) -> dict
                 # Whether this row pays you. The page must never sort on it,
                 # but you want to know.
                 "earns": bool(o["commission_rate"]),
-                "rating": o["rating"],
-                "rating_count": o["rating_count"],
                 "seen": o["last_seen"],
             })
 
