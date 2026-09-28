@@ -379,10 +379,16 @@ class ShoppingAdapter(Adapter):
         seen: set[str] = set()
         spent = cached = 0
 
+        ran = 0
         with httpx.Client(timeout=config.HTTP_TIMEOUT) as client:
             for q in queries:
-                if len(offers) >= limit:
-                    break
+                # There used to be a `break` here once `limit` offers had been
+                # collected. It stopped part-way down the seed file, always at
+                # the same place, so the queries at the bottom were never sent
+                # at all -- the whole previous-generation section silently did
+                # not exist. The seed file is the budget; every line in it gets
+                # asked. `limit` truncates the result at the end instead.
+                ran += 1
 
                 rows = cache_get(self.provider.id, q)
                 if rows is None:
@@ -412,10 +418,19 @@ class ShoppingAdapter(Adapter):
                         seen.add(offer.external_id)
                         offers.append(offer)
 
+        # Report queries actually sent, not the length of the file. The old
+        # message printed the file length whatever happened, which is how a run
+        # that skipped a third of the list still looked complete in the log.
         log.info(
-            "shopping(%s): %d offers from %d queries (%d billed, %d cached)",
-            self.provider.id, len(offers), len(queries), spent, cached,
+            "shopping(%s): %d offers from %d of %d queries (%d billed, %d cached)",
+            self.provider.id, len(offers), ran, len(queries), spent, cached,
         )
+        if len(offers) > limit:
+            log.warning(
+                "shopping(%s): %d offers collected but limit is %d — %d dropped. "
+                "Raise --limit, or the tail of the seed file never reaches the site.",
+                self.provider.id, len(offers), limit, len(offers) - limit,
+            )
         return offers[:limit]
 
     def _to_offer(self, row: dict, query: str) -> RawOffer | None:

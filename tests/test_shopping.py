@@ -196,6 +196,56 @@ def _stub_adapter(tmp_seed: Path) -> ShoppingAdapter:
     return a
 
 
+# --------------------------------------------------------------------------
+# Every seed query gets sent.
+#
+# The adapter used to stop looping once it had `limit` offers. Because it broke
+# out of the loop over the seed file, the queries at the bottom were never sent
+# at all -- and it was always the same ones. The previous-generation clubs live
+# at the bottom of that file, so an entire section of the catalogue silently did
+# not exist, while the log still reported the full query count.
+# --------------------------------------------------------------------------
+
+def test_every_seed_query_is_sent_even_when_the_limit_is_small():
+    a = _stub_adapter(Path("."))
+    wanted = ["query %d" % i for i in range(30)]
+    a.seed_queries = lambda: wanted  # type: ignore[method-assign]
+    StubProvider.calls = []
+
+    a.fetch(limit=5)
+
+    assert StubProvider.calls == wanted, (
+        "the seed file is the budget: %d of %d queries were sent"
+        % (len(StubProvider.calls), len(wanted))
+    )
+
+
+def test_the_limit_truncates_the_result_rather_than_the_query_list():
+    a = _stub_adapter(Path("."))
+    a.seed_queries = lambda: ["query %d" % i for i in range(30)]  # type: ignore[method-assign]
+    StubProvider.calls = []
+
+    # The stub returns the same three sellable rows for every query and the
+    # adapter de-dupes, so three is all there is to truncate.
+    offers = a.fetch(limit=2)
+
+    assert len(offers) == 2
+    assert len(StubProvider.calls) == 30
+
+
+def test_queries_at_the_bottom_of_the_file_reach_the_results():
+    """The actual symptom: clubs listed last never appeared on the site."""
+    a = _stub_adapter(Path("."))
+    a.seed_queries = lambda: (  # type: ignore[method-assign]
+        ["current gen %d" % i for i in range(25)] + ["Titleist TSR driver"]
+    )
+    StubProvider.calls = []
+
+    a.fetch(limit=100000)
+
+    assert "Titleist TSR driver" in StubProvider.calls
+
+
 def test_fetch_keeps_real_clubs_and_drops_junk(tmp_path=None):
     a = _stub_adapter(Path("."))
     offers = a.fetch()
