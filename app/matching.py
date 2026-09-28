@@ -39,7 +39,9 @@ from difflib import SequenceMatcher
 # Canonical brand -> aliases seen in the wild. Order matters for longest match:
 # "Scotty Cameron" must beat "Titleist" on a "Titleist Scotty Cameron" title.
 BRAND_ALIASES: dict[str, list[str]] = {
-    "Scotty Cameron": ["scotty cameron", "scotty"],
+    # The parent brand is listed too, so it is removed from the model string
+    # rather than left behind as "titleist phantom 11".
+    "Scotty Cameron": ["titleist scotty cameron", "scotty cameron", "scotty"],
     "Vokey": ["vokey", "vokey design", "titleist vokey"],
     "TaylorMade": ["taylormade", "taylor made", "tmag", "taylormade golf"],
     "Callaway": ["callaway", "callaway golf"],
@@ -80,7 +82,11 @@ CLUB_TYPE_PATTERNS: list[tuple[str, str]] = [
     ("wedge", r"\bwedges?\b|\b(lob|sand|gap|pitching)\s+wedge\b"),
     ("putter", r"\bputters?\b"),
     ("driver", r"\bdrivers?\b"),
-    ("fairway_wood", r"\bfairway\b|\b(3|5|7|9)\s*wood\b|\b(3|5|7|9)w\b|\bheavenwood\b"),
+    # A bare "wood" counts. Without it "TSR2 Fairway Wood" kept "wood" in the
+    # model while "TSR2 Fairway" and "TSR2 3 Wood" did not, so one club became
+    # three products. The lookbehind keeps a signature club out of it.
+    ("fairway_wood", r"\bfairway\b|\b(3|5|7|9)\s*wood\b|\b(3|5|7|9)w\b"
+                     r"|\bheavenwood\b|(?<!tiger )\bwoods?\b"),
     ("hybrid", r"\bhybrids?\b|\brescue\b|\butility\b"),
     ("bag", r"\b(stand|cart|carry|staff)\s+bag\b|\bgolf\s+bag\b"),
     ("glove", r"\bglove\b"),
@@ -125,6 +131,9 @@ NOISE_WORDS = {
     "the", "with", "w", "and", "for", "in", "custom", "authorized", "dealer",
     "free", "shipping", "sale", "clearance", "closeout", "deal", "special",
     "genuine", "official", "premium", "series", "edition", "model", "club",
+    # Sub-brand filler. "Titleist Vokey Design SM10" and "Vokey SM10" are the
+    # same wedge, but only one of them says "design".
+    "design",
     "clubs", "head", "handed", "hand", "right", "left", "rh", "lh", "flex",
     "degree", "degrees", "deg", "loft", "shaft", "graphite", "steel", "adult",
     "assembled", "usa", "brand-new", "instock", "stock",
@@ -214,7 +223,9 @@ _SET_LETTER = {"P": "PW", "G": "GW", "A": "AW", "S": "SW", "W": "PW"}
 # invisible to a four-digit year pattern.
 _YEAR2_RE = re.compile(r"[‘’'`](\d{2})\b")
 _BOUNCE_RE = re.compile(r"\b(\d{2}(?:\.\d)?)\s*[.\-/]\s*(\d{1,2})\b")
-_LENGTH_RE = re.compile(r"\b(3[2-6])\s*(?:\"|in\b|inch\b)", re.I)
+_LENGTH_RE = re.compile(r"\b(3[2-6])(?:\.\d)?\s*(?:\"|in\b|inch\b)", re.I)
+# Same range, no unit. Only ever applied to putters -- see parse().
+_BARE_LENGTH_RE = re.compile(r"(?<![A-Za-z0-9.])(3[2-6])(?:\.\d)?(?![A-Za-z0-9.])")
 _DOZEN_RE = re.compile(r"\b(\d+)\s*(?:dozen|dz|doz)\b|\bdozen\b", re.I)
 
 
@@ -441,20 +452,33 @@ def extract_model(
     text = _ascii_fold(title)
 
     if brand:
-        for alias in BRAND_ALIASES.get(brand, [brand.lower()]):
+        # Longest alias first, always. "vokey" sits inside "titleist vokey", so
+        # removing the short one first leaves an orphan "titleist" in the model
+        # and splits Vokey wedges into two products depending on how each
+        # seller wrote the name.
+        aliases = sorted(BRAND_ALIASES.get(brand, [brand.lower()]) + [brand.lower()],
+                         key=len, reverse=True)
+        for alias in aliases:
             text = re.sub(rf"(?i)(?<![a-z]){re.escape(alias)}(?![a-z])", " ", text)
-        text = re.sub(rf"(?i)(?<![a-z]){re.escape(brand)}(?![a-z])", " ", text)
 
     # Remove parsed attributes so they can't pollute the model string. The bare
     # loft matters most here: leave "10.5" in and one retailer's model becomes
     # "qi35 10.5" while another's stays "qi35", and the product splits in two.
     text = _LOFT_RE.sub(" ", text)
     if loft is not None:
-        for form in {f"{loft:g}", f"{loft:.1f}", f"{int(loft)}" if loft.is_integer() else ""}:
-            if form:
-                text = re.sub(
-                    rf"(?<![A-Za-z0-9.]){re.escape(form)}(?![A-Za-z0-9])", " ", text
-                )
+        # Longest form first, and never in set order. This was a set, which
+        # iterates by hash: for a 10.0 loft it removed either "10.0" (clean) or
+        # "10" (leaving a stray ".0" welded to the model) depending on the run.
+        # Two refreshes of the same listing could land on different products.
+        forms = [f"{loft:.1f}", f"{loft:g}"]
+        if loft.is_integer():
+            forms.append(str(int(loft)))
+        for form in sorted(dict.fromkeys(forms), key=len, reverse=True):
+            # The trailing "." in the lookahead is what stops "10" being taken
+            # out of "10.0" even if the order above ever changes again.
+            text = re.sub(
+                rf"(?<![A-Za-z0-9.]){re.escape(form)}(?![A-Za-z0-9.])", " ", text
+            )
     text = _BOUNCE_RE.sub(" ", text)
     text = _SET_RE.sub(" ", text)
     text = _LENGTH_RE.sub(" ", text)
@@ -481,6 +505,11 @@ def extract_model(
         for ct, pattern in CLUB_TYPE_PATTERNS:
             if ct == club_type:
                 text = re.sub(pattern, " ", text, flags=re.I)
+        # A putter's unitless length has to come out too, or "Phantom 11 Putter
+        # 34" keeps the 34 as part of the model and never meets "Phantom 11
+        # Putter 34in" again.
+        if club_type == "putter":
+            text = _BARE_LENGTH_RE.sub(" ", text)
 
     # Anything in brackets is almost always spec restatement or marketing.
     text = re.sub(r"[\(\[][^\)\]]*[\)\]]", " ", text)
@@ -553,6 +582,14 @@ def parse(
         lm = _LENGTH_RE.search(title)
         if lm:
             p.length = float(lm.group(1))
+        else:
+            # Half of all putter listings write the length with no unit at all:
+            # "Phantom 11 Putter 34". Read a standalone 32-36 as inches, which
+            # is safe because no putter is modelled with a number in that range
+            # -- they are Phantom 5/7/11, Newport 2, Anser 2, DF3.
+            bare = _BARE_LENGTH_RE.search(title)
+            if bare:
+                p.length = float(bare.group(1))
 
     p.match_key = build_match_key(p)
     p.display_name = build_display_name(p)

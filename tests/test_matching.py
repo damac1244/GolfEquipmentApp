@@ -324,6 +324,107 @@ def test_model_year_does_not_split_a_product():
 # GTIN
 # --------------------------------------------------------------------------
 
+# --------------------------------------------------------------------------
+# Splits found while chasing "there are clubs missing". Each of these turned
+# one real club into two or three products, which reads on the site as a club
+# with a single seller and no comparison — indistinguishable from absent.
+# --------------------------------------------------------------------------
+
+def test_whole_number_loft_written_with_a_decimal_does_not_split():
+    """
+    "10.0" and "10" are the same loft. The stripper used to iterate a set, so
+    depending on the run it removed "10" and left ".0" welded to the model.
+    Non-deterministic: the same listing could land on a different product from
+    one refresh to the next.
+    """
+    index = ProductIndex()
+    keys = {index.assign(parse(t)) for t in [
+        "Titleist TSR2 Driver 10.0 Stiff RH",
+        "Titleist TSR2 Driver 10 Stiff RH",
+        "Titleist TSR2 Driver 10 Degree Stiff Right Handed",
+    ]}
+    assert len(keys) == 1, keys
+
+
+def test_the_decimal_loft_fix_is_deterministic():
+    """Parse repeatedly: the answer must not depend on hash order."""
+    keys = {parse("Titleist TSR2 Driver 10.0 Stiff RH").match_key
+            for _ in range(50)}
+    assert len(keys) == 1
+    assert ".0" not in parse("Titleist TSR2 Driver 10.0 Stiff RH").model
+
+
+@pytest.mark.parametrize("title", [
+    "Titleist TSR2 Fairway Wood 15 Degree Regular RH",
+    "Titleist TSR2 Fairway 15 Regular RH",
+    "Titleist TSR2 3 Wood 15 Regular RH",
+])
+def test_fairway_wood_wording_does_not_split(title):
+    """A bare "Wood" used to survive into the model string."""
+    base = parse("Titleist TSR2 Fairway Wood 15 Degree Regular RH")
+    assert parse(title).match_key == base.match_key
+
+
+def test_tiger_woods_is_not_a_fairway_wood():
+    """The obvious cost of accepting a bare "wood"."""
+    assert parse("Tiger Woods Signature Putter 35 RH").club_type == "putter"
+
+
+def test_parent_brand_does_not_survive_in_a_sub_brand_model():
+    """
+    Removing "vokey" before "titleist vokey" left an orphan "titleist" in the
+    model, so one seller's wedge never met another's.
+    """
+    index = ProductIndex()
+    keys = {index.assign(parse(t)) for t in [
+        "Titleist Vokey SM10 Wedge 56 RH",
+        "Vokey SM10 Wedge 56 Degrees RH",
+        "Titleist Vokey Design SM10 Wedge 56.0 RH",
+    ]}
+    assert len(keys) == 1, keys
+
+
+def test_scotty_cameron_keeps_its_parent_brand_out_of_the_model():
+    index = ProductIndex()
+    keys = {index.assign(parse(t)) for t in [
+        "Scotty Cameron Phantom 11 Putter 34 RH",
+        "Titleist Scotty Cameron Phantom 11 Putter 34in RH",
+    ]}
+    assert len(keys) == 1, keys
+
+
+@pytest.mark.parametrize("title", [
+    "Scotty Cameron Phantom 11 Putter 34 RH",
+    "Scotty Cameron Phantom 11 Putter 34in RH",
+    'Scotty Cameron Phantom 11 Putter 34" Right Handed',
+    "Scotty Cameron Phantom 11 Putter 34 inch RH",
+])
+def test_putter_length_without_a_unit_is_read_as_length(title):
+    """
+    Half of all putter listings write "34" with no unit. It used to be read as
+    part of the model name instead, so the same putter split by how each seller
+    punctuated its length.
+    """
+    p = parse(title)
+    assert p.length == 34.0
+    assert "34" not in p.model
+
+
+def test_putter_length_still_separates_real_variants():
+    """34in and 35in are different products, and must stay that way."""
+    a = parse("Scotty Cameron Phantom 11 Putter 34 RH")
+    b = parse("Scotty Cameron Phantom 11 Putter 35 RH")
+    assert a.match_key != b.match_key
+
+
+def test_putter_model_numbers_are_not_mistaken_for_length():
+    """Phantom 5 and Phantom 11 sit outside the length range on purpose."""
+    a = parse("Scotty Cameron Phantom 5 Putter 34 RH")
+    b = parse("Scotty Cameron Phantom 11 Putter 34 RH")
+    assert a.match_key != b.match_key
+    assert a.length == 34.0 and b.length == 34.0
+
+
 def test_gtin_normalization_pads_upc_to_13():
     assert normalize_gtin("012345678905") == "0012345678905"
     assert normalize_gtin("0012345678905") == "0012345678905"

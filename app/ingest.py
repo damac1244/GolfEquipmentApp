@@ -17,6 +17,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import os
 import sqlite3
 import sys
 from datetime import datetime, timezone
@@ -216,7 +217,43 @@ def run(source: str | None = None, limit: int = 2000, query: str | None = None) 
             results[adapter.id] = {"ok": False, "error": str(exc)}
             log.error("%s failed: %s", adapter.id, exc)
 
+    # Nothing was ever deleted before this, which meant two things: a club that
+    # stopped being listed kept its last known price on the site indefinitely,
+    # and any change to how products are keyed left the old products sitting
+    # alongside the new ones as duplicates.
+    #
+    # Only prune after a run that actually brought data back. A provider outage
+    # must not be allowed to empty the catalogue.
+    fresh = sum(r.get("offers", 0) for r in results.values() if r.get("ok"))
+    if fresh:
+        with db.session() as conn:
+            removed = prune(conn)
+        if removed["offers"] or removed["products"]:
+            log.info("pruned %d stale offers and %d empty products",
+                     removed["offers"], removed["products"])
+        results["_pruned"] = removed
+
     return results
+
+
+# Offers older than this are dropped. Long enough to survive a few failed
+# refreshes, short enough that nobody is shown last month's price.
+STALE_AFTER_DAYS = int(os.getenv("GOLF_STALE_AFTER_DAYS", "7"))
+
+
+def prune(conn) -> dict:
+    """Drop offers we have not seen recently, then products left with none."""
+    cur = conn.execute(
+        "DELETE FROM offers WHERE last_seen < datetime('now', ?)",
+        (f"-{STALE_AFTER_DAYS} days",),
+    )
+    offers = cur.rowcount or 0
+
+    cur = conn.execute(
+        "DELETE FROM products WHERE id NOT IN (SELECT DISTINCT product_id FROM offers)"
+    )
+    products = cur.rowcount or 0
+    return {"offers": offers, "products": products}
 
 
 def probe(source: str) -> None:

@@ -2,62 +2,82 @@
 #
 # Shopping APIs are search-driven — you cannot ask for "all golf clubs". This
 # file IS your catalogue: one query per line, one billed API call per line per
-# refresh (cached for 24h).
+# refresh (cached for 24h). A club with no line here can never appear on the
+# site, however many sellers are listing it.
 #
-# THIS FILE IS YOUR BILL. 60 queries daily is ~1,800 calls a month. On a
-# provider at $1 per 1,000 that is under $2; on SerpApi's starter plan it
-# exceeds the quota. Start with the 20 clubs people actually search for and
-# grow the list when you can see which ones earn.
+# THIS FILE IS YOUR BILL. Check the credit cost of your provider's plan before
+# adding a section — Serper bills 2 credits per request, so 80 lines is 160
+# credits a day, roughly 4,800 a month.
 #
 # Tips:
-#   - Include the year or model name; "golf driver" returns noise.
-#   - Add "used" variants for the clubs where the used market is deep — the
-#     shopping index carries far less used stock than eBay or 2nd Swing, so
-#     treat these as a bonus, not your used coverage.
+#   - Query the FAMILY, not each variant. "Ping G440 driver" returns Max, LST
+#     and SFT in one call; three separate lines cost three times as much for
+#     largely the same rows.
+#   - Include the model name. "golf driver" returns noise.
 #   - Comment out a line with # to stop paying for it.
+#   - Previous-generation clubs are where the discounts and the used stock are.
+#     A current flagship is the same price everywhere; last year's is not.
 
-# ── Drivers: the highest-value, most-compared category ──
+# ══ CURRENT GENERATION ═════════════════════════════════════════════════════
+# What people search for by name. Families, not variants.
+
+# ── Drivers ──
 TaylorMade Qi35 driver
-TaylorMade Qi35 Max driver
 Callaway Elyte driver
-Callaway Elyte Triple Diamond driver
-Titleist GT2 driver
-Titleist GT3 driver
-Ping G440 Max driver
-Ping G440 LST driver
-Cobra DS-Adapt Max driver
+Titleist GT driver
+Ping G440 driver
+Cobra DS-Adapt driver
 Srixon ZXi driver
+Mizuno ST-Max driver
+PXG Black Ops driver
 
 # ── Fairways and hybrids ──
 TaylorMade Qi35 fairway wood
 Callaway Elyte fairway wood
-Titleist GT2 fairway wood
-Ping G440 hybrid
+Titleist GT fairway wood
+Ping G440 fairway wood
+TaylorMade Qi35 hybrid
 Callaway Elyte hybrid
+Titleist GT hybrid
+Ping G440 hybrid
 
 # ── Iron sets: biggest absolute price spread, so the best savings stories ──
 TaylorMade P790 irons
+TaylorMade P770 irons
 TaylorMade Qi irons
 Callaway Apex Ai200 irons
+Callaway Apex Pro irons
 Mizuno JPX925 Hot Metal irons
+Mizuno JPX925 Forged irons
 Mizuno Pro 243 irons
+Mizuno Pro 245 irons
+Titleist T100 irons
 Titleist T150 irons
+Titleist T200 irons
+Titleist T350 irons
 Ping i230 irons
 Ping G440 irons
+Ping Blueprint irons
 Srixon ZXi5 irons
+Cobra King Tec irons
+PXG 0311 irons
 
 # ── Wedges ──
 Titleist Vokey SM10 wedge
 Cleveland RTZ wedge
 Callaway Opus wedge
 Ping s159 wedge
+TaylorMade MG4 wedge
+Mizuno T24 wedge
 
 # ── Putters ──
-Scotty Cameron Phantom 11 putter
+Scotty Cameron Phantom putter
+Scotty Cameron Newport putter
 Odyssey Ai-One putter
 TaylorMade Spider Tour putter
-Ping Anser putter
+Ping PLD putter
 LAB Golf DF3 putter
+Bettinardi putter
 
 # ── Balls: low value each, but high search volume and repeat purchase ──
 Titleist Pro V1 golf balls
@@ -67,11 +87,54 @@ TaylorMade TP5x golf balls
 Bridgestone Tour B XS golf balls
 Srixon Z-Star golf balls
 
-# ── Used variants: thin coverage here, but free to try ──
-used TaylorMade Qi35 driver
-used Callaway Elyte driver
-used Titleist GT2 driver
-used Ping G440 driver
+# ══ PREVIOUS GENERATION ════════════════════════════════════════════════════
+# The half of the market the site was missing entirely. A current flagship
+# sells for the same price at every retailer; a superseded one is discounted
+# unevenly, which is exactly the spread a comparison site exists to show. It
+# is also where nearly all the used stock sits.
+#
+# If you need to cut the bill, cut here last, not first.
+
+# ── Drivers and woods ──
+Titleist TSR driver
+Titleist TSR fairway wood
+Titleist TSi driver
+TaylorMade Qi10 driver
+TaylorMade Qi10 fairway wood
+TaylorMade Stealth 2 driver
+Callaway Paradym Ai Smoke driver
+Callaway Paradym driver
+Ping G430 driver
+Ping G430 fairway wood
+Cobra Darkspeed driver
+Cobra Aerojet driver
+
+# ── Irons ──
+TaylorMade Qi10 irons
+TaylorMade Stealth irons
+Callaway Paradym Ai Smoke irons
+Ping G430 irons
+Titleist T100 2023 irons
+Mizuno JPX923 Hot Metal irons
+Mizuno Pro 241 irons
+Srixon ZX5 Mk II irons
+
+# ── Wedges and putters ──
+Titleist Vokey SM9 wedge
+Callaway Jaws Raw wedge
+Scotty Cameron Special Select putter
+Odyssey White Hot OG putter
+TaylorMade Spider X putter
+
+# ══ USED ═══════════════════════════════════════════════════════════════════
+# Thin coverage — the shopping index carries far less used stock than eBay or
+# 2nd Swing, so treat these as a bonus rather than your used inventory. The
+# real fix for used is a merchant feed (GlobalGolf, 2nd Swing).
+used Titleist TSR driver
+used TaylorMade Qi10 driver
+used Ping G430 driver
+used Callaway Paradym driver
 used TaylorMade P790 irons
-used Titleist Vokey SM10 wedge
+used Titleist T100 irons
+used Titleist Vokey SM9 wedge
 used Scotty Cameron putter

@@ -1,0 +1,5 @@
+# Cloudflare Pages redirects. One rule per line: from  to  status.
+# The comparison tool now lives on the homepage; keep old links working and
+# tell search engines the move is permanent.
+/compare        /   301
+/compare.html   /   301
