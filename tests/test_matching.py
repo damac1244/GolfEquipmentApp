@@ -425,6 +425,66 @@ def test_putter_model_numbers_are_not_mistaken_for_length():
     assert a.length == 34.0 and b.length == 34.0
 
 
+# --------------------------------------------------------------------------
+# Handedness.
+#
+# A right-handed club is not a cheaper version of a left-handed one, it is
+# useless to the buyer — so this is the one spec where a wrong answer sends
+# someone to buy a club they cannot swing. 63% of listings were parsing as
+# "not stated" because only three spellings were known.
+# --------------------------------------------------------------------------
+
+@pytest.mark.parametrize("title,expected", [
+    ("TaylorMade Qi35 Driver LH", "LH"),
+    ("TaylorMade Qi35 Driver Left Hand", "LH"),
+    ("TaylorMade Qi35 Driver Left-Handed", "LH"),
+    ("TaylorMade Qi35 Driver Lefty", "LH"),
+    ("TaylorMade Qi35 Driver for Lefties", "LH"),
+    # The men's/women's/ladies' prefixes golf retail uses on every listing.
+    ("TaylorMade Qi35 Driver MLH", "LH"),
+    ("TaylorMade Qi35 Driver WLH", "LH"),
+    ("TaylorMade Qi35 Driver MRH", "RH"),
+    ("TaylorMade Qi35 Driver RH", "RH"),
+    ("TaylorMade Qi35 Driver Right Hand", "RH"),
+    ("TaylorMade Qi35 Driver, Dexterity: Left", "LH"),
+    ("TaylorMade Qi35 Driver, Hand: Right", "RH"),
+    # A bare side, inside a spec list.
+    ("TaylorMade Qi35 Driver / 10.5 / Left / Stiff", "LH"),
+    ("TaylorMade Qi35 Driver (Right)", "RH"),
+    ("TaylorMade Qi35 Driver, Left, Stiff", "LH"),
+])
+def test_handedness_is_read_from_the_shapes_shops_use(title, expected):
+    assert parse(title).dexterity == expected
+
+
+@pytest.mark.parametrize("title", [
+    "TaylorMade Qi35 Driver",
+    "the right club for your swing",
+    "Delivered right to your door",
+    "Wright Golf Driver",
+    "Bright Yellow Golf Balls",
+    "Right out of the box performance",
+    "Cleveland RTZ Wedge",
+])
+def test_an_ordinary_word_is_not_a_handedness(title):
+    """
+    "Right" in a sentence is an adjective. Reading it as a spec would hand a
+    left-handed golfer a club they cannot use, which is worse than not knowing.
+    """
+    assert parse(title).dexterity is None
+
+
+def test_left_wins_when_a_title_says_both():
+    """Shops call out left and leave right implied, so left is the signal."""
+    assert parse("Left Handed Driver — right out of the box").dexterity == "LH"
+
+
+def test_handedness_still_separates_products():
+    a = parse("TaylorMade Qi35 Driver 10.5 Stiff MRH")
+    b = parse("TaylorMade Qi35 Driver 10.5 Stiff MLH")
+    assert a.match_key != b.match_key
+
+
 def test_gtin_normalization_pads_upc_to_13():
     assert normalize_gtin("012345678905") == "0012345678905"
     assert normalize_gtin("0012345678905") == "0012345678905"

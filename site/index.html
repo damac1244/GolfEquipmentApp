@@ -322,6 +322,16 @@ footer .wrap{padding-block:min(40px,5vw)}
       </div>
 
       <div class="sideblock">
+        <div class="kick">Handedness</div>
+        <div class="row" id="hands">
+          <button class="chip" type="button" data-hand="" aria-pressed="true">All</button>
+          <button class="chip" type="button" data-hand="RH" aria-pressed="false">Right</button>
+          <button class="chip" type="button" data-hand="LH" aria-pressed="false">Left</button>
+        </div>
+        <div class="kick" id="handnote" style="margin-top:10px;text-transform:none;letter-spacing:0;font-weight:400" hidden></div>
+      </div>
+
+      <div class="sideblock">
         <div class="kick">Category</div>
         <div class="row" id="filters">
           <button class="chip" type="button" data-type="" aria-pressed="true">All</button>
@@ -390,6 +400,8 @@ footer .wrap{padding-block:min(40px,5vw)}
   var filters   = document.getElementById("filters");
   var sorts     = document.getElementById("sorts");
   var conds     = document.getElementById("conds");
+  var hands     = document.getElementById("hands");
+  var handNote  = document.getElementById("handnote");
   var headEl    = document.getElementById("heading");
   var moreBtn   = document.getElementById("more");
   var formEl    = document.getElementById("search");
@@ -402,6 +414,7 @@ footer .wrap{padding-block:min(40px,5vw)}
   var DATA = null;
   var typeFilter = "";
   var condFilter = "";
+  var handFilter = "";   // "", "RH" or "LH"
   var sortBy = "sellers";
   var open = {};   // club id -> expanded
 
@@ -519,6 +532,9 @@ footer .wrap{padding-block:min(40px,5vw)}
     var words = q ? q.split(/\s+/) : [];
     var list = DATA.clubs.filter(function (c) {
       if (typeFilter && c.type !== typeFilter) return false;
+      if (handFilter && !c.variants.some(function (v) { return v.dex === handFilter; })) {
+        return false;
+      }
       if (condFilter === "used" && (c.used_from === null || c.used_from === undefined)) return false;
       if (condFilter === "new" && (c.new_from === null || c.new_from === undefined)) return false;
       if (!words.length) return true;
@@ -590,6 +606,53 @@ footer .wrap{padding-block:min(40px,5vw)}
         '</th><th scope="col" class="r"></th></tr></thead>' +
         '<tbody>' + offerRows(v) + '</tbody></table></div>' +
       '</div>';
+  }
+
+  // A handedness filter cannot just hide rows: if a left-hander asks for left,
+  // the price on the card has to be the left-handed price. So the club is
+  // recomputed from the variants that survive, exactly the way the export
+  // computes it from all of them.
+  function viewOf(c) {
+    if (!handFilter) return c;
+
+    var vs = c.variants.filter(function (v) { return v.dex === handFilter; });
+    if (!vs.length) return null;
+
+    var comparable = [];
+    vs.forEach(function (v) {
+      v.offers.forEach(function (o) { if (!o.suspect) comparable.push(o); });
+    });
+    if (!comparable.length) {
+      vs.forEach(function (v) { comparable = comparable.concat(v.offers); });
+    }
+
+    var sellers = {};
+    var best = Infinity, spread = 0, newFrom = null, usedFrom = null;
+    comparable.forEach(function (o) {
+      sellers[o.retailer] = 1;
+      if (o.total < best) best = o.total;
+      if (o.condition === "new") {
+        if (newFrom === null || o.total < newFrom) newFrom = o.total;
+      } else if (usedFrom === null || o.total < usedFrom) {
+        usedFrom = o.total;
+      }
+    });
+    var pct = 0;
+    vs.forEach(function (v) {
+      if (v.spread > spread) { spread = v.spread; pct = v.spread_pct; }
+    });
+
+    var out = {};
+    for (var k in c) { if (Object.prototype.hasOwnProperty.call(c, k)) out[k] = c[k]; }
+    out.variants = vs;
+    out.variant_count = vs.length;
+    out.sellers = Object.keys(sellers).length;
+    out.best = best === Infinity ? c.best : best;
+    out.spread = spread;
+    out.spread_pct = pct;
+    out.new_from = newFrom;
+    out.used_from = usedFrom;
+    return out;
   }
 
   // The badge already shows the gap, so spend this line on something it
@@ -709,7 +772,25 @@ footer .wrap{padding-block:min(40px,5vw)}
       return;
     }
 
-    results.innerHTML = list.slice(0, shown).map(card).join("");
+    results.innerHTML = list.slice(0, shown).map(function (c) {
+      return card(viewOf(c) || c);
+    }).join("");
+
+    // Say out loud what a handedness filter is hiding. Most sellers never
+    // state it, so the filtered list is far smaller than the real choice —
+    // and a lefty should not conclude the site has nothing for them.
+    if (handFilter && DATA) {
+      var silent = DATA.clubs.filter(function (c) {
+        return !c.variants.some(function (v) { return v.dex; });
+      }).length;
+      handNote.textContent = silent
+        ? silent.toLocaleString() + " more clubs are hidden because the seller never said " +
+          "which hand they are for. Clear this filter to see them."
+        : "";
+      handNote.hidden = !silent;
+    } else {
+      handNote.hidden = true;
+    }
 
     var left = list.length - shown;
     moreBtn.hidden = left <= 0;
@@ -724,6 +805,7 @@ footer .wrap{padding-block:min(40px,5vw)}
     if (q) u.set("q", q);
     if (typeFilter) u.set("type", typeFilter);
     if (condFilter) u.set("cond", condFilter);
+    if (handFilter) u.set("hand", handFilter);
     if (sortBy !== "sellers") u.set("sort", sortBy);
     var s = u.toString();
     history.replaceState(null, "", s ? "?" + s : location.pathname);
@@ -743,8 +825,11 @@ footer .wrap{padding-block:min(40px,5vw)}
     typeFilter = TYPE_PLURAL[t] ? t : "";
     var c = u.get("cond") || "";
     condFilter = (c === "new" || c === "used") ? c : "";
+    var hd = u.get("hand") || "";
+    handFilter = (hd === "RH" || hd === "LH") ? hd : "";
     var s = u.get("sort") || "sellers";
     sortBy = SORTS[s] ? s : "sellers";
+    press(hands, "data-hand", handFilter);
     press(filters, "data-type", typeFilter);
     press(conds, "data-cond", condFilter);
     press(sorts, "data-sort", sortBy);
@@ -793,6 +878,14 @@ footer .wrap{padding-block:min(40px,5vw)}
     refresh();
   });
 
+  hands.addEventListener("click", function (e) {
+    var btn = e.target.closest(".chip");
+    if (!btn) return;
+    handFilter = btn.getAttribute("data-hand") || "";
+    press(hands, "data-hand", handFilter);
+    refresh();
+  });
+
   sorts.addEventListener("click", function (e) {
     var btn = e.target.closest(".chip");
     if (!btn) return;
@@ -802,9 +895,9 @@ footer .wrap{padding-block:min(40px,5vw)}
   });
 
   document.getElementById("clear").addEventListener("click", function () {
-    qInput.value = ""; typeFilter = ""; condFilter = ""; sortBy = "sellers";
+    qInput.value = ""; typeFilter = ""; condFilter = ""; handFilter = ""; sortBy = "sellers";
     press(filters, "data-type", ""); press(conds, "data-cond", "");
-    press(sorts, "data-sort", "sellers");
+    press(hands, "data-hand", ""); press(sorts, "data-sort", "sellers");
     refresh();
   });
 
