@@ -1,0 +1,58 @@
+/* Shared styling for Bagdrop's content pages — about, privacy, terms, 404.
+   Same tokens as the homepage, trimmed to what prose needs. The homepage keeps
+   its own inline styles because it ships the whole app in one file. */
+:root{
+  --color-bg:#131211;
+  --color-surface:#1c1b1a;
+  --color-text:#f3f2f2;
+  --color-divider:color-mix(in srgb,#f3f2f2 22%,transparent);
+  --n600:#8d8988; --n700:#adaaa9;
+  --color-accent:#7aa8b4;
+  --accent-400:#3a6b7a; --accent-800:#c9dde3;
+  --used:#adc16b;
+  --font:"Archivo",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
+  --wrap:760px;
+  --pad:min(32px,5vw);
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;background:var(--color-bg);color:var(--color-text);font-family:var(--font);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased;
+  display:flex;flex-direction:column;min-height:100vh;
+}
+.wrap{max-width:var(--wrap);margin-inline:auto;padding-inline:var(--pad);width:100%}
+h1,h2,h3{font-weight:800;line-height:1.14;letter-spacing:-.02em;margin:0}
+h1{font-size:clamp(2rem,5vw,2.9rem);letter-spacing:-.03em}
+h2{font-size:clamp(1.15rem,2.4vw,1.45rem);margin-top:38px}
+h3{font-size:1.02rem;margin-top:26px}
+p,ul,ol{margin:14px 0 0}
+ul,ol{padding-left:22px}
+li{margin-top:6px}
+a{color:var(--accent-800);text-underline-offset:3px}
+a:hover{color:var(--color-text)}
+:focus-visible{outline:2px solid var(--color-accent);outline-offset:2px}
+strong{font-weight:700}
+.kick{font:800 9px var(--font);letter-spacing:.14em;text-transform:uppercase;color:var(--n600)}
+
+.masthead{border-bottom:2px solid var(--color-divider);background:var(--color-bg)}
+.masthead .wrap{display:flex;align-items:center;gap:18px;min-height:64px;flex-wrap:wrap}
+.mark{display:flex;align-items:center;gap:9px;font:800 20px/1 var(--font);
+  letter-spacing:-.02em;color:inherit;text-decoration:none}
+.mark span{width:13px;height:13px;background:var(--color-accent);flex:none}
+.masthead nav{margin-left:auto;display:flex;gap:16px;flex-wrap:wrap}
+.masthead nav a{font:800 11px var(--font);letter-spacing:.1em;text-transform:uppercase;
+  color:var(--n700);text-decoration:none}
+.masthead nav a:hover{color:var(--color-text)}
+
+main{flex:1;padding-block:clamp(32px,6vw,64px) 56px}
+.lede{font-size:clamp(1.02rem,2vw,1.15rem);color:var(--n700);margin-top:18px;max-width:60ch}
+.updated{margin-top:10px}
+.note{border-left:2px solid var(--used);padding:2px 0 2px 16px;margin-top:20px;color:var(--n700);
+  font-size:.95rem}
+
+footer{border-top:2px solid var(--color-divider);padding-block:26px 40px}
+footer .wrap{display:flex;gap:18px;flex-wrap:wrap;align-items:baseline}
+footer a{font-size:.85rem}
+footer .kick{margin-right:auto}

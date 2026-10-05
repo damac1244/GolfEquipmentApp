@@ -1,0 +1,6 @@
+# Bagdrop — https://thebagdropgolf.com
+# Everything here is public price comparison. Crawl it.
+User-agent: *
+Allow: /
+
+Sitemap: https://thebagdropgolf.com/sitemap.xml
