@@ -1050,5 +1050,15 @@ footer .wrap{padding-block:min(40px,5vw)}
 })();
 </script>
 
+<!-- Impact Universal Tracking Tag. Verifies ownership of the domain to
+     Impact, and once merchant programmes are approved, transformLinks
+     rewrites outbound links to those merchants into tracked affiliate links
+     automatically — which is why it has to load on the page that renders the
+     price tables, not just a landing page.
+
+     The page must work without it: a good share of visitors run blockers that
+     stop impactcdn, and nothing above depends on this script. -->
+<script type="text/javascript">(function(i,m,p,a,c,t){c.ire_o=p;c[p]=c[p]||function(){(c[p].a=c[p].a||[]).push(arguments)};t=a.createElement(m);var z=a.getElementsByTagName(m)[0];t.async=1;t.src=i;z.parentNode.insertBefore(t,z)})('https://utt.impactcdn.com/P-A7902562-618e-411a-95a1-e9c4940c38f51.js','script','impactStat',document,window);impactStat('transformLinks');impactStat('trackImpression');</script>
+
 </body>
 </html>
