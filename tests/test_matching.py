@@ -44,7 +44,9 @@ except ModuleNotFoundError:  # pragma: no cover - fallback for bare environments
 
     pytest = _PytestShim()  # type: ignore[assignment]
 
-from app.matching import ProductIndex, normalize_gtin, parse  # noqa: E402
+from app.matching import (  # noqa: E402
+    ProductIndex, build_display_name, normalize_gtin, parse,
+)
 
 
 # --------------------------------------------------------------------------
@@ -483,6 +485,63 @@ def test_handedness_still_separates_products():
     a = parse("TaylorMade Qi35 Driver 10.5 Stiff MRH")
     b = parse("TaylorMade Qi35 Driver 10.5 Stiff MLH")
     assert a.match_key != b.match_key
+
+
+# --------------------------------------------------------------------------
+# Names people actually read.
+#
+# 22% of club names on the live site had junk in them: a putter filed under
+# golf balls because its title said both, shaft makers and club lengths
+# wedged into the model, stock numbers surviving as if they were model
+# numbers. None of it stops the site working; all of it makes it look like
+# nobody is home.
+# --------------------------------------------------------------------------
+
+def test_a_club_is_not_filed_as_balls_because_its_title_says_ball():
+    """
+    "Odyssey White Hot OG 2 Putter Golf Balls" is a putter under a careless
+    title. Balls used to be matched first, so any club whose title mentioned
+    one was categorised as balls and carried the words in its name.
+    """
+    p = parse("Odyssey White Hot OG 2 Putter Golf Balls")
+    assert p.club_type == "putter"
+    assert "ball" not in build_display_name(p).lower()
+
+
+@pytest.mark.parametrize("title", [
+    "Titleist Pro V1 Golf Balls",
+    "Titleist Pro V1x Golf Balls 1 Dozen",
+    "Callaway Chrome Soft Golf Balls",
+])
+def test_actual_golf_balls_are_still_golf_balls(title):
+    assert parse(title).club_type == "golf_balls"
+
+
+@pytest.mark.parametrize("title,gone", [
+    ("TaylorMade Qi10 Max 5 40g 212161 Fairway Wood", ["212161", "40g"]),
+    ("Cobra DS-Adapt 60 45.75in Driver", ["45.75"]),
+    ("Titleist GT2 4 Mitsubishi 1K Blue 40.0in Hybrid", ["mitsubishi", "40.0"]),
+])
+def test_stock_numbers_lengths_and_shaft_makers_leave_the_name(title, gone):
+    name = build_display_name(parse(title)).lower()
+    for token in gone:
+        assert token.lower() not in name, f"{token!r} survived in {name!r}"
+
+
+@pytest.mark.parametrize("title,expected", [
+    ("TaylorMade P790 Irons 4-PW Stiff RH", "TaylorMade P790 Irons — 4-PW, Stiff, RH"),
+    ("PING i230 Irons 5-PW Regular", "PING I230 Irons — 5-PW, Regular"),
+    ("TaylorMade Qi35 Driver 10.5 Stiff RH", "TaylorMade Qi35 Driver — 10.5°, Stiff, RH"),
+])
+def test_the_names_that_were_already_right_stay_right(title, expected):
+    """The cleanup must not take the model with it."""
+    assert build_display_name(parse(title)) == expected
+
+
+def test_a_short_model_number_is_not_mistaken_for_a_stock_number():
+    """P790 and i230 are models. Only a long bare run of digits is a SKU."""
+    assert "790" in build_display_name(parse("TaylorMade P790 Irons"))
+    assert "11" in build_display_name(parse("Scotty Cameron Phantom 11 Putter"))
 
 
 def test_gtin_normalization_pads_upc_to_13():

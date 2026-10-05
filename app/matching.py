@@ -380,12 +380,42 @@ def extract_flex(title: str) -> str | None:
     return None
 
 
+# Handedness, in the several dozen ways a golf shop writes it. Worth the
+# detail: a right-handed club is not a cheaper version of a left-handed one,
+# it is useless to the buyer, and 63% of listings were landing in "not stated"
+# because the parser only knew three spellings.
+_LH_RE = re.compile(
+    r"\bleft[\s\-]*hand(ed)?\b|\blefty\b|\blefties\b"
+    r"|\b[mwl]?lh\b"                      # LH, MLH (men's), WLH, LLH (ladies')
+    r"|\b(dex(terity)?|hand)\s*[:\-]\s*left\b",
+    re.I,
+)
+_RH_RE = re.compile(
+    r"\bright[\s\-]*hand(ed)?\b|\brighty\b"
+    r"|\b[mwl]?rh\b"
+    r"|\b(dex(terity)?|hand)\s*[:\-]\s*right\b",
+    re.I,
+)
+# A bare "Left" or "Right" only means handedness inside a spec list —
+# "Qi35 / 10.5 / Left / Stiff". In a sentence it is an ordinary adjective
+# ("the right club for your swing"), so it has to be delimited to count.
+_BARE_SIDE_RE = re.compile(
+    r"(?:^|[\(\[/|,;\-–—])\s*(left|right)\s*(?:$|[\)\]/|,;\-–—])", re.I
+)
+
+
 def extract_dexterity(title: str) -> str | None:
     low = _ascii_fold(title).lower()
-    if re.search(r"\bleft[\s-]*hand(ed)?\b|\blh\b|\(lh\)|\blefty\b", low):
+    # Left first: a title that says both ("left hand" plus a stray "right")
+    # is far more likely to be a left-handed club, because left is the one
+    # sellers bother to call out.
+    if _LH_RE.search(low):
         return "LH"
-    if re.search(r"\bright[\s-]*hand(ed)?\b|\brh\b|\(rh\)", low):
+    if _RH_RE.search(low):
         return "RH"
+    bare = _BARE_SIDE_RE.search(low)
+    if bare:
+        return "LH" if bare.group(1).lower() == "left" else "RH"
     return None
 
 

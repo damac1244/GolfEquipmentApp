@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from pathlib import Path
 
 from .. import config
@@ -32,10 +33,20 @@ class SampleAdapter(Adapter):
         self.path = path or FEED_PATH
 
     def is_configured(self) -> bool:
-        return self.path.exists()
+        # Deliberately NOT just "the file exists". sample_feed.json is checked
+        # into the repo, so a bare existence test made this adapter configured
+        # on every CI run. The day the workflow stops pinning --source and
+        # starts running every configured source — which is exactly what
+        # happens when a real merchant feed is added — synthetic prices would
+        # have poured into the live site alongside the real ones, under
+        # retailer names that look plausible. It has to be asked for.
+        return self.path.exists() and os.getenv("GOLF_ENABLE_SAMPLE") == "1"
 
     def fetch(self, query: str | None = None, limit: int = 500) -> list[RawOffer]:
-        if not self.is_configured():
+        # Naming the source on the command line IS the opt-in, so this checks
+        # for the file rather than the env var. Only auto-selection needs the
+        # stricter test above.
+        if not self.path.exists():
             raise AdapterError(
                 f"{self.path} not found; run: python scripts/make_sample_feed.py"
             )

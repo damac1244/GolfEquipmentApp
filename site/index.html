@@ -205,6 +205,12 @@ th.r,td.r{text-align:right}
 .cond{font-size:12px;color:var(--n600)}
 .total{font-weight:800;white-space:nowrap}
 .ship{font-size:11px;color:var(--n600)}
+/* How old a price is. Two thirds of them are a day or more behind, and until
+   now the page showed one "checked" line at the top, so a week-old number
+   looked exactly as current as one pulled this morning. */
+.seen{display:block;font-size:11px;color:var(--n600);margin-top:2px}
+.seen.stale{color:#d9a441}
+.seen.old{color:#d97a41;font-weight:600}
 tr.best td{background:var(--used-100)}
 tr.best{box-shadow:inset 2px 0 0 var(--used)}
 tr.susp td{opacity:.5}
@@ -501,6 +507,25 @@ footer .wrap{padding-block:min(40px,5vw)}
     return days + (days === 1 ? " day ago" : " days ago");
   }
 
+  // Whole days since a price was last confirmed. Null when the feed did not
+  // say, which is not the same as fresh.
+  function daysOld(iso) {
+    if (!iso) return null;
+    var then = new Date(iso);
+    if (isNaN(then)) return null;
+    return Math.floor((Date.now() - then.getTime()) / 86400000);
+  }
+
+  function seenLabel(iso) {
+    var d = daysOld(iso);
+    if (d === null) return { text: "last checked unknown", cls: "stale" };
+    if (d <= 0) return { text: "checked today", cls: "" };
+    if (d === 1) return { text: "checked yesterday", cls: "" };
+    // Past a couple of days a price is a claim about the past, not the
+    // present, and the page should look uneasy about it.
+    return { text: "checked " + d + " days ago", cls: d >= 4 ? "old" : "stale" };
+  }
+
   function emptyState(title, body) {
     results.innerHTML = '<div class="state"><h2>' + title + '</h2><p>' + body + '</p></div>';
   }
@@ -573,7 +598,11 @@ footer .wrap{padding-block:min(40px,5vw)}
 
       html +=
         '<tr' + (rowCls ? ' class="' + rowCls + '"' : '') + '>' +
-          '<td><span class="seller">' + esc(o.retailer) + '</span></td>' +
+          '<td><span class="seller">' + esc(o.retailer) + '</span>' +
+            (function () {
+              var s = seenLabel(o.seen);
+              return '<span class="seen ' + s.cls + '">' + esc(s.text) + '</span>';
+            })() + '</td>' +
           '<td><span class="cond">' + conditionText(o) + '</span>' + flagText(o) + '</td>' +
           '<td class="r"><span class="total ' + cls + ' num">' + money(o.total, o.currency) +
             '</span><br>' + ship + '</td>' +
@@ -685,6 +714,17 @@ footer .wrap{padding-block:min(40px,5vw)}
     if (c.variant_count > 1) spec.push(c.variant_count + " options");
     spec.push(usedCount ? usedCount + " used listing" + (usedCount === 1 ? "" : "s")
                         : "new only");
+
+    // The headline price is one specific offer. Say how old that one is,
+    // rather than letting the site-wide refresh time speak for it.
+    var leadSeen = null;
+    c.variants.forEach(function (v) {
+      v.offers.forEach(function (o) {
+        if (o.suspect) return;
+        if (o.total === c.best && (leadSeen === null || o.seen > leadSeen)) leadSeen = o.seen;
+      });
+    });
+    if (leadSeen) spec.push(seenLabel(leadSeen).text);
 
     // The design leads with a price cut. Only claim one when the gap is real
     // and measured within a single fitting — see the export for why.
