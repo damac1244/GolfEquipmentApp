@@ -4,348 +4,415 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Bagdrop — Golf club price comparison</title>
-<meta name="description" content="Compare what every seller charges for the same driver, iron set, wedge or putter — ranked by the total you pay, shipping included. Updated daily.">
+<meta name="description" content="Compare what every seller charges for the same driver, iron set, wedge or putter — new and used, ranked by the total you pay. Updated daily.">
 <meta name="theme-color" content="#131211">
 <link rel="canonical" href="https://thebagdropgolf.com/">
-<!-- A real file, not a data URI: Google only shows favicons it can crawl. -->
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<!-- What a link to the site looks like when pasted into a message or post. -->
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Bagdrop">
 <meta property="og:url" content="https://thebagdropgolf.com/">
-<meta property="og:title" content="Bagdrop — Every seller, one row each">
-<meta property="og:description" content="Compare what every seller charges for the same golf club, ranked by the total you pay. Updated daily.">
+<meta property="og:title" content="Bagdrop — Someone else already broke it in">
+<meta property="og:description" content="New and used golf club prices side by side, ranked by the total you pay. Updated daily.">
 <meta name="twitter:card" content="summary">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&display=swap">
 <style>
+/* ──────────────────────────────────────────────────────────────────────────
+   Bagdrop — "Modernist" design system, page-level palette.
+   Ported from the Claude Design canvas: the system ships light with a red
+   accent, and the page overrides every token to this dark slate set. Square
+   corners throughout, Archivo 800 for anything structural.
+   ────────────────────────────────────────────────────────────────────────── */
 :root{
-  --bg:#131211;
-  --surface:#1c1b1a;
-  --raised:#2a2827;
-  --text:#f3f2f2;
-  --n800:#d3d0cf;
-  --n700:#adaaa9;
-  --n600:#8d8988;
-  --n500:#6e6a69;
-  --n400:#514e4d;
-  --n300:#3b3938;
-  --n200:#302e2d;
-  --new:#5b86ff;
-  --new-dim:#152249;
-  --used:#35e0a1;
-  --used-100:#0e2a20;
-  --used-300:#155c43;
-  --deep:#06251a;
-  --font:"Archivo","Helvetica Neue",Arial,sans-serif;
-  --wrap:1100px;
+  --color-bg:#131211;
+  --color-surface:#1c1b1a;
+  --color-text:#f3f2f2;
+  --color-divider:color-mix(in srgb,#f3f2f2 22%,transparent);
+
+  --n100:#2a2827; --n200:#302e2d; --n300:#3b3938; --n400:#514e4d;
+  --n500:#6e6a69; --n600:#8d8988; --n700:#adaaa9; --n800:#d3d0cf; --n900:#eae7e7;
+
+  --color-accent:#7aa8b4;
+  --accent-300:#27505c; --accent-400:#3a6b7a; --accent-500:#5b8f9e;
+  --accent-600:#7fa9b6; --accent-800:#c9dde3;
+
+  /* The two colours that carry meaning on every price in the site. */
+  --new:#5b8f9e;
+  --used:#adc16b;
+  --used-100:#1e2414;
+  --used-300:#4a5a24;
+  --used-ink:#1b2209;
+
+  --font:"Archivo",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
+  --wrap:1240px;
+  --pad:min(32px,5vw);
   color-scheme:dark;
 }
 
-*{box-sizing:border-box}
+*,*::before,*::after{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
 body{
-  margin:0;background:var(--bg);color:var(--text);font-family:var(--font);
-  font-size:16px;line-height:1.55;padding-inline:20px;
+  margin:0;background:var(--color-bg);color:var(--color-text);
+  font-family:var(--font);font-size:15px;line-height:1.55;font-weight:400;
   -webkit-font-smoothing:antialiased;
+  display:flex;flex-direction:column;min-height:100vh;
 }
-.wrap{max-width:var(--wrap);margin-inline:auto}
-h1,h2{margin:0;line-height:1.08;font-weight:700;letter-spacing:-.02em}
-h1{font-size:clamp(2.3rem,6vw,4rem);letter-spacing:-.028em;text-wrap:balance}
-h1 em{font-style:normal;color:var(--used);display:block}
-h2{font-size:clamp(1.3rem,2.6vw,1.7rem)}
-h3{margin:0;font-size:1rem;font-weight:600;letter-spacing:-.005em}
-
-/* hero: the search is the first thing on the page, not a link to it */
-.hero{padding-block:clamp(26px,6vw,60px) 8px;display:flex;flex-direction:column;gap:16px}
-.lede{font-size:clamp(1rem,1.8vw,1.13rem);color:var(--n700);max-width:56ch}
-.stats{font-size:.84rem;color:var(--n600)}
-.stats strong{color:var(--n800);font-weight:600}
-.searchbar input{font-size:1.1rem!important;padding:16px 17px!important}
-
-/* results header: what you're looking at, and how it's ordered */
-.results-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}
-.results-head h2{font-size:1.05rem;letter-spacing:-.01em}
-.sort{display:flex;align-items:center;gap:8px;font-size:.8rem;color:var(--n600)}
-.sort select{
-  font-family:inherit;font-size:.82rem;color:var(--text);background:var(--surface);
-  border:1px solid var(--n300);border-radius:6px;padding:6px 9px;cursor:pointer;
-}
-.more{
-  align-self:center;font-family:inherit;font-size:.9rem;font-weight:600;cursor:pointer;
-  color:var(--text);background:var(--surface);border:1px solid var(--n400);
-  border-radius:8px;padding:12px 22px;margin-top:4px;
-}
-.more:hover{background:var(--raised)}
-
-/* how it works */
-.how{border-top:1px solid var(--n300);padding-block:clamp(36px,6vw,60px);display:flex;flex-direction:column;gap:24px}
-.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:26px}
-.col h3{margin-bottom:6px}
-.col p{color:var(--n700);font-size:.92rem}
+h1,h2,h3{font-family:var(--font);font-weight:800;line-height:1.12;letter-spacing:-.02em;margin:0}
 p{margin:0}
-a{color:var(--used);text-underline-offset:3px}
-button{font-family:inherit}
-:focus-visible{outline:2px solid var(--used);outline-offset:2px;border-radius:3px}
+a{color:var(--accent-800);text-underline-offset:3px}
+a:hover{color:var(--color-text)}
+img{display:block;max-width:100%}
+:focus{outline:none}
+:focus-visible{outline:2px solid var(--color-accent);outline-offset:2px}
+::selection{background:color-mix(in srgb,var(--color-accent) 30%,transparent)}
 .num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
-.eyebrow{font-size:.68rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--n600)}
+.wrap{max-width:var(--wrap);margin-inline:auto;padding-inline:var(--pad);width:100%}
 
-/* header */
-.masthead{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding-block:22px}
-.mark{display:flex;align-items:center;gap:9px;font-weight:700;font-size:1.1rem;letter-spacing:.15em;text-transform:uppercase;color:var(--text);text-decoration:none}
-.chip{width:10px;height:10px;border-radius:2px;background:var(--used);flex:none}
-.freshness{font-size:.76rem;color:var(--n600)}
+/* The system's small-caps label. Used everywhere a field needs naming. */
+.kick{font:800 9px var(--font);letter-spacing:.14em;text-transform:uppercase;
+  color:color-mix(in srgb,#f3f2f2 58%,transparent)}
 
-/* search */
-.searchbar{display:flex;gap:8px;flex-wrap:wrap;margin-block:6px 14px}
-.searchbar input{
-  flex:1 1 280px;min-width:0;font-size:1.02rem;color:var(--text);
-  background:var(--surface);border:1px solid var(--n300);border-radius:8px;padding:13px 15px;
+/* — buttons, chips, inputs — */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  cursor:pointer;text-decoration:none;font-family:var(--font);font-weight:800;
+  font-size:14px;line-height:1.2;color:var(--color-text);
+  background:transparent;border:1px solid transparent;padding:8px 14px;border-radius:0;
 }
-.searchbar input::placeholder{color:var(--n500)}
-.searchbar input:focus-visible{border-color:var(--used)}
+.btn-primary{background:var(--accent-400);color:#f3f2f2}
+.btn-primary:hover{background:var(--accent-500)}
+.btn-primary:active{background:var(--accent-300)}
+.btn-secondary{border-color:var(--color-divider)}
+.btn-secondary:hover{background:color-mix(in srgb,#f3f2f2 7%,transparent)}
+.btn-ghost{color:var(--color-accent);padding-inline:4px}
+.btn-ghost:hover{background:color-mix(in srgb,var(--color-accent) 10%,transparent)}
 
-.filters{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:18px}
-.pill{
-  font-size:.8rem;font-weight:500;color:var(--n700);background:transparent;
-  border:1px solid var(--n300);border-radius:999px;padding:6px 13px;cursor:pointer;
+.chip{
+  font:800 10px var(--font);letter-spacing:.08em;text-transform:uppercase;
+  padding:6px 10px;border:1px solid var(--color-divider);cursor:pointer;
+  background:transparent;color:var(--color-text);white-space:nowrap;border-radius:0;
 }
-.pill[aria-pressed="true"]{color:var(--deep);background:var(--used);border-color:var(--used);font-weight:600}
+.chip:hover{background:color-mix(in srgb,#f3f2f2 9%,transparent)}
+.chip[aria-pressed="true"]{background:var(--accent-400);color:#f3f2f2;border-color:var(--accent-400)}
 
-.summary{display:flex;gap:18px;flex-wrap:wrap;align-items:center;font-size:.83rem;color:var(--n600);margin-bottom:14px}
-/* Currency is stated once, plainly, rather than repeated on 500 rows. */
-.cur{font-size:.68rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
-  color:var(--n800);background:var(--raised);border:1px solid var(--n300);
-  border-radius:999px;padding:4px 10px}
-.legend{display:flex;gap:7px;align-items:center}
-.dot{width:8px;height:8px;border-radius:50%;flex:none}
-.dot.new{background:var(--new)}
-.dot.used{background:var(--used)}
-
-/* result cards */
-.results{display:flex;flex-direction:column;gap:10px}
-.results-wrap{display:flex;flex-direction:column;gap:10px;padding-bottom:48px}
-.card{background:var(--surface);border:1px solid var(--n300);border-radius:10px;overflow:hidden}
-.card-head{
-  display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;
-  width:100%;text-align:left;background:transparent;border:0;color:inherit;
-  padding:15px 18px;cursor:pointer;
+.input{
+  width:100%;min-height:36px;padding:8px 10px;font:inherit;font-size:14px;
+  color:var(--color-text);caret-color:var(--color-accent);background:var(--color-surface);
+  border:1px solid var(--color-divider);border-radius:0;
 }
-.card-head:hover{background:var(--raised)}
+.input::placeholder{color:var(--n500)}
+.input:hover{border-color:color-mix(in srgb,#f3f2f2 45%,transparent)}
+.input:focus-visible{border-color:var(--color-accent);outline-offset:0}
 
-/* product thumbnail
-   Sellers' photography is shot on white, so the tile is light on purpose —
-   a transparent tile would leave white squares floating on a dark page. */
-.thumb{
-  width:62px;height:62px;flex:none;border-radius:8px;overflow:hidden;
-  background:#f5f4f3;border:1px solid var(--n300);
-  display:flex;align-items:center;justify-content:center;
-}
-.thumb img{width:100%;height:100%;object-fit:contain;padding:5px;display:block}
-/* No image in the feed, or one that failed to load. Naming the club type
-   beats a broken-image icon and keeps the row the same height either way. */
-.thumb.no-img{background:var(--raised);border-style:dashed;border-color:var(--n400)}
-.thumb.no-img img{display:none}
-.thumb .ph{display:none;font-size:.56rem;font-weight:700;letter-spacing:.07em;
-  text-transform:uppercase;color:var(--n600);text-align:center;line-height:1.25;padding:3px}
-.thumb.no-img .ph{display:block}
-.title{display:block;font-weight:600;font-size:1rem;letter-spacing:-.01em}
-.meta{display:block;font-size:.8rem;color:var(--n600);margin-top:3px}
-.prices{display:flex;gap:16px;align-items:baseline;justify-content:flex-end;flex-wrap:wrap}
-.pblock{text-align:right;min-width:78px}
-.plabel{font-size:.62rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--n600)}
-.pval{font-size:1.08rem;font-weight:700;white-space:nowrap}
-.pval.is-new{color:var(--new)}
-.pval.is-used{color:var(--used)}
-.pval.none{color:var(--n500);font-weight:500;font-size:.9rem}
-.save{font-size:.76rem;color:var(--n600);white-space:nowrap}
-.chev{color:var(--n500);font-size:.8rem;margin-left:4px}
+.row{display:flex;align-items:center;gap:10px}
 
-.badge{display:inline-block;font-size:.6rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;border-radius:3px;padding:3px 7px;margin-left:8px;vertical-align:2px}
-.badge.low{color:var(--deep);background:var(--used)}
+/* — sticky header — */
+.masthead{position:sticky;top:0;z-index:6;background:var(--color-bg);
+  border-bottom:2px solid var(--color-divider)}
+.masthead .wrap{display:flex;align-items:center;gap:min(28px,3vw);flex-wrap:wrap;min-height:64px;padding-block:10px}
+.mark{display:flex;align-items:center;gap:9px;font:800 20px/1 var(--font);
+  letter-spacing:-.02em;color:inherit;text-decoration:none;flex:none}
+.mark span{width:13px;height:13px;background:var(--color-accent);flex:none}
+.headsearch{display:flex;gap:8px;flex:1 1 min(100%,320px);min-width:0}
 
-/* offer table */
-.detail{border-top:1px solid var(--n300);background:var(--bg)}
+/* — the band that says how fresh this is — */
+.syncbar{border-bottom:1px solid var(--color-divider);
+  background:color-mix(in srgb,var(--color-accent) 14%,#131211)}
+.syncbar .wrap{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding-block:8px}
+.syncdetail{font:400 10.5px/1.4 var(--font);margin-top:2px;color:var(--n700)}
+
+/* — hero — */
+.hero{position:relative;isolation:isolate;overflow:hidden;
+  border-bottom:2px solid var(--color-accent);
+  padding:min(76px,9vw) 0 min(40px,5vw)}
+.hero::before,.hero::after{content:"";position:absolute;inset:0}
+.hero::before{z-index:-3;background-image:url("hero.webp");background-size:cover;
+  background-position:50% 42%;filter:grayscale(1) contrast(1.12) brightness(.72)}
+.hero::after{z-index:-2;background:#4e7a86;mix-blend-mode:color;opacity:.62}
+.hero-tint{position:absolute;inset:0;z-index:-1;
+  background:linear-gradient(100deg,#131211 6%,color-mix(in srgb,#131211 82%,transparent) 40%,
+    color-mix(in srgb,#131211 34%,transparent) 78%,color-mix(in srgb,#0e1a3d 55%,transparent) 100%)}
+.hero h1{font-size:min(66px,9vw);line-height:.98;letter-spacing:-.035em;margin:14px 0 0;
+  max-width:16ch;text-wrap:pretty;text-shadow:0 2px 24px rgba(10,12,20,.55)}
+.hero h1 em{font-style:normal;color:var(--used)}
+.hero p.lede{font:400 min(17px,4.4vw)/1.55 var(--font);margin:18px 0 0;max-width:56ch}
+.herostats{display:flex;flex-wrap:wrap;margin-top:min(48px,6vw);
+  border-top:2px solid var(--color-accent);
+  background:color-mix(in srgb,#131211 62%,transparent);backdrop-filter:blur(3px)}
+.herostats div{flex:1 1 150px;padding:18px;border-right:1px solid var(--color-divider)}
+.herostats b{display:block;font:800 min(30px,6vw)/1 var(--font);letter-spacing:-.02em}
+.herostats .kick{margin-top:7px}
+
+/* — two columns: filters, then the feed — */
+.columns{display:flex;flex-wrap:wrap;gap:min(36px,4vw);padding-block:min(32px,4vw)}
+.side{flex:1 1 240px;max-width:100%}
+.feed{flex:99 1 min(100%,520px);min-width:0}
+.sidehead{padding-bottom:10px;border-bottom:2px solid var(--color-divider)}
+.sideblock{padding:16px 0;border-bottom:1px solid var(--color-divider)}
+.sideblock .row{gap:6px;flex-wrap:wrap;margin-top:10px}
+.feedhead{display:flex;align-items:center;gap:12px;padding-bottom:10px;
+  border-bottom:2px solid var(--color-divider);flex-wrap:wrap}
+.feedhead h2{font-size:min(24px,5.5vw);letter-spacing:-.02em}
+.feedhead .kick{margin-left:auto}
+
+/* — one club in the feed — */
+.club{border-bottom:1px solid var(--color-divider)}
+.clubhead{display:flex;gap:min(20px,2.5vw);align-items:flex-start;flex-wrap:wrap;
+  width:100%;text-align:left;background:none;border:0;color:inherit;
+  padding:18px 0;cursor:pointer;font:inherit}
+.clubhead:hover{background:color-mix(in srgb,var(--color-accent) 7%,transparent)}
+.shot{width:96px;height:96px;flex:none;background:var(--n100);
+  display:flex;align-items:center;justify-content:center;overflow:hidden}
+.shot img{width:100%;height:100%;object-fit:contain;padding:6px;filter:grayscale(1) contrast(1.08)}
+.shot.empty{background-image:repeating-linear-gradient(135deg,
+  color-mix(in srgb,#f3f2f2 13%,transparent) 0 2px,transparent 2px 7px)}
+.shot .ph{display:none;font:400 9px ui-monospace,Menlo,monospace;color:var(--n600)}
+.shot.empty .ph{display:block}
+.shot.empty img{display:none}
+.clubmain{flex:1 1 200px;min-width:0}
+.clubname{font:800 min(19px,4.6vw)/1.15 var(--font)}
+.cut{font:800 11px var(--font);letter-spacing:.06em;padding:4px 8px;
+  background:var(--used);color:var(--used-ink);flex:none}
+.flagpill{font:800 10px var(--font);letter-spacing:.06em;padding:3px 7px;
+  border:1px solid var(--color-divider);color:var(--n700);flex:none}
+.clubnote{font:400 11px/1.4 var(--font);margin-top:10px;color:var(--n600)}
+.clubprices{display:flex;flex:0 1 auto;gap:22px;align-items:flex-end}
+.clubprices > span{display:flex;flex-direction:column}
+.clubprices .kick{display:block}
+.clubprices b{display:block;font:800 min(28px,6vw)/1 var(--font);margin-top:5px}
+.clubprices .alt{display:block;font:800 16px/1 var(--font);margin-top:5px;opacity:.5}
+.is-new{color:var(--new)}
+.is-used{color:var(--used)}
+.chev{margin-left:auto;align-self:center;color:var(--n500);font-size:11px}
+
+/* — the offer tables inside an open club — */
+.detail{border-top:1px solid var(--color-divider);background:var(--color-surface);
+  margin-bottom:18px}
+.variant + .variant{border-top:1px solid var(--color-divider)}
+.vhead{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
+  padding:10px 14px;background:color-mix(in srgb,#f3f2f2 4%,transparent)}
+.vspec{font:800 12px var(--font);letter-spacing:-.005em}
+.vspec.unstated{font-weight:500;color:var(--n600);font-style:italic}
 .scroller{overflow-x:auto}
-table{border-collapse:collapse;width:100%;min-width:560px}
-th,td{text-align:left;padding:11px 18px;border-bottom:1px solid var(--n200)}
+table{border-collapse:collapse;width:100%;min-width:560px;font-size:14px}
+th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--color-divider)}
 tbody tr:last-child td{border-bottom:0}
-th{font-size:.64rem;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--n600);background:var(--raised)}
+th{font:800 11px var(--font);letter-spacing:.08em;text-transform:uppercase;color:var(--n600);
+  border-bottom:2px solid var(--color-divider)}
 th.r,td.r{text-align:right}
-.seller{font-weight:500;font-size:.94rem}
-.cond{font-size:.8rem;color:var(--n600)}
-.total{font-weight:700;white-space:nowrap}
-.total.is-new{color:var(--new)}
-.total.is-used{color:var(--used)}
-.ship{font-size:.75rem;color:var(--n600)}
+.seller{font-weight:600}
+.cond{font-size:12px;color:var(--n600)}
+.total{font-weight:800;white-space:nowrap}
+.ship{font-size:11px;color:var(--n600)}
 tr.best td{background:var(--used-100)}
 tr.best{box-shadow:inset 2px 0 0 var(--used)}
-/* Offers the engine could not compare like for like — a single iron inside a
-   set listing, a bulk case, a price in another currency. Shown, because
-   hiding data is worse, but dimmed and labelled so nobody reads them as the
-   bargain of the page. */
 tr.susp td{opacity:.5}
-.flag{display:inline-block;font-size:.6rem;font-weight:700;letter-spacing:.06em;
+.flag{display:inline-block;font:800 9px var(--font);letter-spacing:.06em;
   text-transform:uppercase;color:var(--n700);border:1px solid var(--n400);
-  border-radius:3px;padding:2px 6px;margin-left:8px;vertical-align:1px;white-space:nowrap}
-.go{
-  display:inline-block;font-size:.78rem;font-weight:600;text-decoration:none;
-  color:var(--deep);background:var(--used);border-radius:5px;padding:6px 13px;white-space:nowrap;
+  padding:2px 6px;margin-left:8px;white-space:nowrap}
+.go{display:inline-block;font:800 12px var(--font);text-decoration:none;
+  color:#f3f2f2;background:var(--accent-400);padding:7px 14px;white-space:nowrap}
+.go:hover{background:var(--accent-500);color:#f3f2f2}
+.foot-note{padding:11px 14px;font-size:11.5px;color:var(--n600);
+  border-top:1px solid var(--color-divider)}
+
+.more{display:block;width:100%;margin-top:24px;padding:14px;
+  font:800 13px var(--font);letter-spacing:.06em;text-transform:uppercase;
+  background:transparent;color:var(--color-text);border:1px solid var(--color-divider);
+  cursor:pointer}
+.more:hover{background:color-mix(in srgb,#f3f2f2 7%,transparent)}
+
+.state{padding:36px 0}
+.state h2{font-size:20px}
+.state p{color:var(--n600);font-size:14px;margin-top:8px;max-width:52ch}
+
+/* — footer — */
+footer{border-top:2px solid var(--color-divider);background:var(--color-bg);
+  margin-top:min(48px,6vw)}
+footer .wrap{padding-block:min(40px,5vw)}
+.footgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:28px}
+.footbrand{font:800 18px/1 var(--font);letter-spacing:-.02em}
+.footbrand + p{font-size:12.5px;margin-top:12px;max-width:34ch;color:var(--n700)}
+.legal{border-top:1px solid var(--color-divider);margin-top:28px;padding-top:18px}
+.legal p{font-size:11.5px;max-width:92ch;color:color-mix(in srgb,#f3f2f2 60%,transparent)}
+.legal .row{gap:18px;margin-top:14px;flex-wrap:wrap}
+
+#sidetoggle{display:none}
+@media (max-width:760px){
+  /* On a phone the filter column is about a screen and a half of chips before
+     a single club appears. Collapse it behind a toggle so the results are the
+     first thing on the page, which is what people came for. */
+  #sidetoggle{display:block;width:100%;margin-bottom:4px}
+  .side{order:2}
+  .feed{order:1}
+  .side .sidehead{display:none}
+  .side[data-collapsed="1"] .sideblock{display:none}
 }
-.go:hover{opacity:.87;color:var(--deep)}
-.foot-note{padding:11px 18px;font-size:.78rem;color:var(--n600);background:var(--raised)}
-
-/* one fitting option inside a club */
-.variant + .variant{border-top:1px solid var(--n300)}
-.vhead{
-  display:flex;align-items:baseline;justify-content:space-between;gap:12px;
-  padding:10px 18px;background:var(--bg);
-}
-.vspec{font-size:.86rem;font-weight:600;letter-spacing:-.005em}
-.vspec.unstated{font-weight:500;color:var(--n600);font-style:italic}
-.vcount{font-size:.76rem;color:var(--n600);white-space:nowrap}
-
-/* states */
-.state{
-  border:1px dashed var(--n400);border-radius:10px;padding:38px 24px;text-align:center;
-  display:flex;flex-direction:column;gap:10px;align-items:center;
-}
-.state h2{font-size:1.15rem}
-.state p{color:var(--n600);font-size:.92rem;max-width:48ch}
-.state code{background:var(--raised);padding:2px 6px;border-radius:4px;font-size:.85em}
-
-footer{border-top:1px solid var(--n300);padding-block:22px 40px;font-size:.8rem;color:var(--n600);display:flex;flex-direction:column;gap:9px}
-.disclosure{max-width:66ch}
-
 @media (max-width:620px){
-  body{padding-inline:14px}
-  /* Thumbnail stays beside the title; prices drop to their own full-width row. */
-  .card-head{grid-template-columns:auto 1fr;gap:12px;padding:13px 14px}
-  .prices{justify-content:flex-start;grid-column:1 / -1}
-  .thumb{width:54px;height:54px}
-  th,td{padding:10px 14px}
+  .clubprices{width:100%;gap:18px}
+  .chev{display:none}
+  th,td{padding:9px 12px}
 }
 @media (prefers-reduced-motion:reduce){*{transition-duration:.01ms!important;animation-duration:.01ms!important}}
-
 </style>
 </head>
 <body>
-<div class="wrap">
 
-  <header class="masthead">
-    <a class="mark" href="/"><span class="chip"></span>Bagdrop</a>
-    <span class="freshness" id="freshness">Loading prices…</span>
-  </header>
-
-  <section class="hero">
-    <h1>Every seller.<em>One row each.</em></h1>
-    <p class="lede">Search a club and see what every seller charges for it —
-    ranked by the total you actually pay, shipping included.</p>
-
-    <form class="searchbar" id="search" role="search">
+<header class="masthead">
+  <div class="wrap">
+    <a class="mark" href="/"><span></span>BAGDROP</a>
+    <form class="headsearch" id="search" role="search">
       <label for="q" style="position:absolute;left:-9999px">Search for a club</label>
-      <input type="search" id="q" placeholder="Search a club, e.g. “P790”"
+      <input class="input" type="search" id="q" placeholder="Search any club…"
              autocomplete="off" enterkeyhint="search">
+      <button class="btn btn-primary" type="submit" style="flex:none">Search</button>
     </form>
-    <p class="stats" id="stats">&nbsp;</p>
-  </section>
-
-  <div class="filters" id="filters">
-    <button class="pill" type="button" data-type="" aria-pressed="true">All</button>
-    <button class="pill" type="button" data-type="driver" aria-pressed="false">Drivers</button>
-    <button class="pill" type="button" data-type="iron_set" aria-pressed="false">Irons</button>
-    <button class="pill" type="button" data-type="wedge" aria-pressed="false">Wedges</button>
-    <button class="pill" type="button" data-type="putter" aria-pressed="false">Putters</button>
-    <button class="pill" type="button" data-type="fairway_wood" aria-pressed="false">Fairways</button>
-    <button class="pill" type="button" data-type="hybrid" aria-pressed="false">Hybrids</button>
-    <button class="pill" type="button" data-type="golf_balls" aria-pressed="false">Balls</button>
   </div>
+</header>
 
-  <div class="summary">
-    <span class="cur" id="currency" hidden></span>
-    <span class="legend"><span class="dot new"></span>New</span>
-    <span class="legend"><span class="dot used"></span>Used</span>
-  </div>
-
-  <div class="results-wrap">
-    <div class="results-head">
-      <h2 id="heading">&nbsp;</h2>
-      <label class="sort">Sort
-        <select id="sort">
-          <option value="sellers">Most sellers</option>
-          <option value="saving">Biggest saving</option>
-          <option value="price">Lowest price</option>
-        </select>
-      </label>
+<div class="syncbar">
+  <div class="wrap">
+    <div style="flex:1 1 260px;min-width:0">
+      <div class="kick" id="syncline">Loading prices…</div>
+      <div class="syncdetail" id="syncdetail">&nbsp;</div>
     </div>
-    <div class="results" id="results"></div>
-    <button class="more" type="button" id="more" hidden></button>
+    <button class="chip" type="button" id="refresh">Refresh</button>
   </div>
-
-  <section class="how">
-    <h2>How it works</h2>
-    <div class="cols">
-      <div class="col">
-        <h3>One club, one row</h3>
-        <p>Sellers list the same club six different ways. We match them, so
-        you compare the club, not the wording.</p>
-      </div>
-      <div class="col">
-        <h3>The total, not the sticker</h3>
-        <p>Every price includes shipping where the seller states it. Where
-        they don't, we say so — unknown is never shown as free.</p>
-      </div>
-      <div class="col">
-        <h3>Ranked by price. Nothing else.</h3>
-        <p>Some sellers may pay us a commission when you buy. It never
-        changes the order, and no seller can pay to move up.</p>
-      </div>
-      <div class="col">
-        <h3>Used, where it exists</h3>
-        <p>Most used clubs are sold through specialists we're still adding.
-        Where a used listing exists, it sits beside the new price.</p>
-      </div>
-    </div>
-  </section>
-
-  <footer>
-    <p class="disclosure">Bagdrop compares prices; we don't sell anything.
-    Prices are collected daily from public listings and shown in the currency
-    the seller quoted, unconverted — check the seller's own page before you
-    buy. Some links may earn us a commission. That never changes the order:
-    results are ranked by total price, and nothing else.</p>
-    <p>&copy; 2026 Bagdrop &middot; <a href="mailto:hello@thebagdropgolf.com">hello@thebagdropgolf.com</a></p>
-  </footer>
 </div>
+
+<section class="hero">
+  <div class="hero-tint"></div>
+  <div class="wrap">
+    <div class="kick">New and used golf equipment, priced side by side</div>
+    <h1>Someone else already <em>broke it in.</em></h1>
+    <p class="lede" id="herolede">Bagdrop checks every seller it can reach for the club
+    you want, then shows the new price and the used price in the same row — with the
+    condition, the seller, and the total you actually pay.</p>
+    <div class="row" style="gap:10px;margin-top:24px;flex-wrap:wrap">
+      <button class="btn btn-primary" type="button" id="tosearch">Search a club</button>
+    </div>
+    <div class="herostats" id="herostats"></div>
+  </div>
+</section>
+
+<main class="wrap">
+  <div class="columns">
+
+    <div class="side" id="side">
+      <button class="chip" type="button" id="sidetoggle" aria-expanded="false">Filters</button>
+      <div class="kick sidehead">Narrow it down</div>
+
+      <div class="sideblock">
+        <div class="kick">Sort</div>
+        <div class="row" id="sorts">
+          <button class="chip" type="button" data-sort="sellers" aria-pressed="true">Most sellers</button>
+          <button class="chip" type="button" data-sort="saving" aria-pressed="false">Biggest gap</button>
+          <button class="chip" type="button" data-sort="price" aria-pressed="false">Lowest price</button>
+        </div>
+      </div>
+
+      <div class="sideblock">
+        <div class="kick">Condition</div>
+        <div class="row" id="conds">
+          <button class="chip" type="button" data-cond="" aria-pressed="true">All</button>
+          <button class="chip" type="button" data-cond="new" aria-pressed="false">New</button>
+          <button class="chip" type="button" data-cond="used" aria-pressed="false">Used listed</button>
+        </div>
+      </div>
+
+      <div class="sideblock">
+        <div class="kick">Category</div>
+        <div class="row" id="filters">
+          <button class="chip" type="button" data-type="" aria-pressed="true">All</button>
+          <button class="chip" type="button" data-type="driver" aria-pressed="false">Drivers</button>
+          <button class="chip" type="button" data-type="iron_set" aria-pressed="false">Irons</button>
+          <button class="chip" type="button" data-type="wedge" aria-pressed="false">Wedges</button>
+          <button class="chip" type="button" data-type="putter" aria-pressed="false">Putters</button>
+          <button class="chip" type="button" data-type="fairway_wood" aria-pressed="false">Fairways</button>
+          <button class="chip" type="button" data-type="hybrid" aria-pressed="false">Hybrids</button>
+          <button class="chip" type="button" data-type="golf_balls" aria-pressed="false">Balls</button>
+        </div>
+      </div>
+
+      <div class="sideblock" style="border-bottom:0">
+        <button class="btn btn-ghost" type="button" id="clear">Clear all filters</button>
+        <div class="kick" id="currency" style="margin-top:14px"></div>
+      </div>
+    </div>
+
+    <div class="feed">
+      <div class="feedhead">
+        <h2 id="feedtitle">Every seller, one row each</h2>
+        <div class="kick" id="heading">&nbsp;</div>
+      </div>
+      <div id="results"></div>
+      <button class="more" type="button" id="more" hidden></button>
+    </div>
+
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="footgrid">
+      <div>
+        <div class="footbrand">BAGDROP</div>
+        <p id="footblurb">New and used golf equipment prices, condition-matched and
+        time-stamped.</p>
+      </div>
+      <div>
+        <div class="kick">Contact</div>
+        <div style="margin-top:12px;font-size:12.5px">
+          <a href="mailto:hello@thebagdropgolf.com">hello@thebagdropgolf.com</a>
+        </div>
+      </div>
+    </div>
+    <div class="legal">
+      <p>Bagdrop compares prices; we don't sell anything. Prices are collected daily
+      from public listings and shown in the currency the seller quoted, unconverted —
+      check the seller's own page before you buy. Some links may earn us a commission.
+      That never changes the order: results are ranked by total price, and nothing else.</p>
+      <div class="row">
+        <span class="kick">&copy; 2026 Bagdrop</span>
+        <span class="kick">Ranked by total price</span>
+      </div>
+    </div>
+  </div>
+</footer>
 
 <script>
 (function () {
   "use strict";
 
-  var results  = document.getElementById("results");
-  var freshEl  = document.getElementById("freshness");
-  var qInput   = document.getElementById("q");
-  var filters  = document.getElementById("filters");
-  var headEl   = document.getElementById("heading");
-  var statsEl  = document.getElementById("stats");
-  var sortEl   = document.getElementById("sort");
-  var moreBtn  = document.getElementById("more");
-  var formEl   = document.getElementById("search");
+  var results   = document.getElementById("results");
+  var qInput    = document.getElementById("q");
+  var filters   = document.getElementById("filters");
+  var sorts     = document.getElementById("sorts");
+  var conds     = document.getElementById("conds");
+  var headEl    = document.getElementById("heading");
+  var moreBtn   = document.getElementById("more");
+  var formEl    = document.getElementById("search");
+  var syncLine  = document.getElementById("syncline");
+  var syncDet   = document.getElementById("syncdetail");
+  var statsEl   = document.getElementById("herostats");
+  var curEl     = document.getElementById("currency");
+  var titleEl   = document.getElementById("feedtitle");
 
   var DATA = null;
   var typeFilter = "";
+  var condFilter = "";
   var sortBy = "sellers";
-  var open = {};   // product id -> expanded
+  var open = {};   // club id -> expanded
 
-  // Rendering 500 cards with photos at once is slow on a phone and buries
+  // Rendering every club with its photo at once is slow on a phone and buries
   // everything below the list. Show a page at a time.
   var PAGE = 30;
   var shown = PAGE;
 
   // Default order is by how many sellers we compared, not by the size of the
   // saving. The biggest gaps are also where a mismatched listing is most likely
-  // to be hiding, and the homepage should lead with the numbers we trust most.
+  // to be hiding, and the page should lead with the numbers we trust most.
   var SORTS = {
     sellers: function (a, b) { return b.sellers - a.sellers || b.spread - a.spread; },
     saving:  function (a, b) { return b.spread - a.spread; },
@@ -355,6 +422,12 @@ footer{border-top:1px solid var(--n300);padding-block:22px 40px;font-size:.8rem;
   var TYPE_PLURAL = {
     driver: "drivers", fairway_wood: "fairway woods", hybrid: "hybrids",
     iron_set: "iron sets", wedge: "wedges", putter: "putters", golf_balls: "balls"
+  };
+
+  var TYPE_LABEL = {
+    driver: "Driver", fairway_wood: "Fairway", hybrid: "Hybrid",
+    iron_set: "Irons", single_iron: "Iron", wedge: "Wedge",
+    putter: "Putter", golf_balls: "Balls"
   };
 
   // Currency of the data as a whole. MIXED means the feed returned more than
@@ -367,12 +440,6 @@ footer{border-top:1px solid var(--n300);padding-block:22px 40px;font-size:.8rem;
     USD: "US dollars", CAD: "Canadian dollars", GBP: "pounds sterling",
     EUR: "euros", AUD: "Australian dollars", NZD: "New Zealand dollars",
     JPY: "yen"
-  };
-
-  var TYPE_LABEL = {
-    driver: "Driver", fairway_wood: "Fairway", hybrid: "Hybrid",
-    iron_set: "Irons", single_iron: "Iron", wedge: "Wedge",
-    putter: "Putter", golf_balls: "Balls"
   };
 
   // Intl does the disambiguating for us: a reader in Canada looking at US
@@ -422,8 +489,7 @@ footer{border-top:1px solid var(--n300);padding-block:22px 40px;font-size:.8rem;
   }
 
   function emptyState(title, body) {
-    results.innerHTML =
-      '<div class="state"><h2>' + title + '</h2><p>' + body + '</p></div>';
+    results.innerHTML = '<div class="state"><h2>' + title + '</h2><p>' + body + '</p></div>';
   }
 
   function conditionText(o) {
@@ -434,9 +500,7 @@ footer{border-top:1px solid var(--n300);padding-block:22px 40px;font-size:.8rem;
     return o.grade ? base + " · " + o.grade : base;
   }
 
-  function currencyWords(code) {
-    return CURRENCY_NAME[code] || code;
-  }
+  function currencyWords(code) { return CURRENCY_NAME[code] || code; }
 
   function flagText(o) {
     if (!o.suspect) return "";
@@ -446,29 +510,31 @@ footer{border-top:1px solid var(--n300);padding-block:22px 40px;font-size:.8rem;
     return '<span class="flag">' + esc(why) + '</span>';
   }
 
-  function currentQuery() {
-    return qInput.value.trim();
-  }
+  // --- filtering, sorting, paging ------------------------------------------
+
+  function currentQuery() { return qInput.value.trim(); }
 
   function matching() {
     var q = currentQuery().toLowerCase();
     var words = q ? q.split(/\s+/) : [];
-    var list = DATA.clubs.filter(function (p) {
-      if (typeFilter && p.type !== typeFilter) return false;
+    var list = DATA.clubs.filter(function (c) {
+      if (typeFilter && c.type !== typeFilter) return false;
+      if (condFilter === "used" && (c.used_from === null || c.used_from === undefined)) return false;
+      if (condFilter === "new" && (c.new_from === null || c.new_from === undefined)) return false;
       if (!words.length) return true;
-      var hay = (p.name + " " + (p.brand || "") + " " + (p.model || "")).toLowerCase();
+      var hay = (c.name + " " + (c.brand || "") + " " + (c.model || "")).toLowerCase();
       return words.every(function (w) { return hay.indexOf(w) !== -1; });
     });
     return list.slice().sort(SORTS[sortBy] || SORTS.sellers);
   }
 
   function headingText(n) {
-    var q = currentQuery();
     var noun = typeFilter ? (TYPE_PLURAL[typeFilter] || "clubs") : (n === 1 ? "club" : "clubs");
     if (typeFilter && n === 1) noun = noun.replace(/s$/, "");
-    if (q) return n + " " + noun + " matching “" + q + "”";
     return n + " " + noun;
   }
+
+  // --- rendering -----------------------------------------------------------
 
   function offerRows(v) {
     // The highlighted row is the best offer we can stand behind, which is not
@@ -481,37 +547,38 @@ footer{border-top:1px solid var(--n300);padding-block:22px 40px;font-size:.8rem;
     var html = "";
     for (var i = 0; i < v.offers.length; i++) {
       var o = v.offers[i];
-      var isNew = o.condition === "new";
-      var cls = isNew ? "is-new" : "is-used";
+      var cls = o.condition === "new" ? "is-new" : "is-used";
       var ship = o.shipping === null || o.shipping === undefined
         ? '<span class="ship">+ shipping unknown</span>'
-        : (o.shipping > 0 ? '<span class="ship">incl. ' + money(o.shipping, o.currency) + ' shipping</span>' : '<span class="ship">free shipping</span>');
-
+        : (o.shipping > 0
+            ? '<span class="ship">incl. ' + money(o.shipping, o.currency) + ' shipping</span>'
+            : '<span class="ship">free shipping</span>');
       var rowCls = o === best ? "best" : (o.suspect ? "susp" : "");
 
       html +=
         '<tr' + (rowCls ? ' class="' + rowCls + '"' : '') + '>' +
           '<td><span class="seller">' + esc(o.retailer) + '</span></td>' +
           '<td><span class="cond">' + conditionText(o) + '</span>' + flagText(o) + '</td>' +
-          '<td class="r"><span class="total ' + cls + ' num">' + money(o.total, o.currency) + '</span><br>' + ship + '</td>' +
-          '<td class="r"><a class="go" href="' + esc(o.url) + '" target="_blank" rel="nofollow noopener sponsored">View</a></td>' +
+          '<td class="r"><span class="total ' + cls + ' num">' + money(o.total, o.currency) +
+            '</span><br>' + ship + '</td>' +
+          '<td class="r"><a class="go" href="' + esc(o.url) +
+            '" target="_blank" rel="nofollow noopener sponsored">View</a></td>' +
         '</tr>';
     }
     return html;
   }
 
   function variantBlock(v, showHead, currency) {
-    // Half of all listings never state a loft or a flex. That is worth saying
-    // plainly: the row is still a real comparison, it just covers every
-    // fitting of the club rather than one.
+    // Half of all listings never state a loft or a flex. Worth saying plainly:
+    // the row is still a real comparison, it just covers every fitting rather
+    // than one.
     var head = "";
     if (showHead) {
       var label = v.label
         ? '<span class="vspec">' + esc(v.label) + '</span>'
         : '<span class="vspec unstated">Spec not stated</span>';
-      head =
-        '<div class="vhead">' + label +
-        '<span class="vcount num">' + v.retailers +
+      head = '<div class="vhead">' + label +
+        '<span class="kick num">' + v.retailers +
         (v.retailers === 1 ? " seller" : " sellers") + '</span></div>';
     }
 
@@ -525,14 +592,23 @@ footer{border-top:1px solid var(--n300);padding-block:22px 40px;font-size:.8rem;
       '</div>';
   }
 
+  // The badge already shows the gap, so spend this line on something it
+  // cannot: where today's price sits against the 90 days we have recorded.
+  function noteFor(c) {
+    if (c.is_low) return "Cheapest it has been in 90 days";
+    if (c.lowest_90d !== null && c.lowest_90d !== undefined && c.lowest_90d < c.best) {
+      return "90-day low was " + money(c.lowest_90d, c.currency);
+    }
+    if (c.spread >= 1) {
+      return money(c.spread, c.currency) + " between the cheapest and dearest seller " +
+             "of the same fitting";
+    }
+    return "Prices close together across sellers";
+  }
+
   function card(c) {
     var isOpen = !!open[c.id];
 
-    // Say what the title cannot: how much comparing there is behind this club.
-    var spec = [c.sellers + (c.sellers === 1 ? " seller" : " sellers")];
-    if (c.variant_count > 1) {
-      spec.push(c.variant_count + " options");
-    }
     var usedCount = 0;
     for (var i = 0; i < c.variants.length; i++) {
       for (var j = 0; j < c.variants[i].offers.length; j++) {
@@ -540,17 +616,47 @@ footer{border-top:1px solid var(--n300);padding-block:22px 40px;font-size:.8rem;
         if (o.condition !== "new" && !o.suspect) usedCount++;
       }
     }
+
+    var spec = [TYPE_LABEL[c.type] || "Club",
+                c.sellers + (c.sellers === 1 ? " seller" : " sellers")];
+    if (c.variant_count > 1) spec.push(c.variant_count + " options");
     spec.push(usedCount ? usedCount + " used listing" + (usedCount === 1 ? "" : "s")
                         : "new only");
-    if (c.spread_pct >= 15) spec.push(c.spread_pct + "% between cheapest and dearest");
 
-    var lowBadge = c.is_low ? '<span class="badge low">Lowest in 90 days</span>' : "";
+    // The design leads with a price cut. Only claim one when the gap is real
+    // and measured within a single fitting — see the export for why.
+    var cut = c.spread_pct >= 10
+      ? '<span class="cut num">−' + Math.round(c.spread_pct) + '%</span>' : "";
+    var low = c.is_low ? '<span class="flagpill">Lowest in 90 days</span>' : "";
 
-    var ph = '<span class="ph">' + esc(TYPE_LABEL[c.type] || "Club") + '</span>';
-    var thumb = c.image
-      ? '<span class="thumb"><img src="' + esc(c.image) + '" alt="" loading="lazy" ' +
+    var ph = '<span class="ph">' + esc((TYPE_LABEL[c.type] || "club").toLowerCase()) + '</span>';
+    var shot = c.image
+      ? '<span class="shot"><img src="' + esc(c.image) + '" alt="" loading="lazy" ' +
         'decoding="async" referrerpolicy="no-referrer">' + ph + '</span>'
-      : '<span class="thumb no-img">' + ph + '</span>';
+      : '<span class="shot empty">' + ph + '</span>';
+
+    // Lead with whichever price someone can actually act on. A used price is
+    // the story when there is one; otherwise the new price is not a fallback,
+    // it is the answer.
+    var leadLabel, leadVal, leadCls, altLabel, altVal;
+    if (c.used_from !== null && c.used_from !== undefined) {
+      leadLabel = "used from"; leadVal = c.used_from; leadCls = "is-used";
+      altLabel = "new from"; altVal = c.new_from;
+    } else {
+      leadLabel = "new from"; leadVal = c.new_from; leadCls = "is-new";
+      altLabel = "used"; altVal = null;
+    }
+
+    var prices =
+      '<span class="clubprices">' +
+        '<span><span class="kick">' + leadLabel + '</span>' +
+          '<b class="' + leadCls + ' num">' + money(leadVal, c.currency) + '</b></span>' +
+        '<span><span class="kick">' + altLabel + '</span>' +
+          (altVal !== null && altVal !== undefined
+            ? '<span class="alt num">' + money(altVal, c.currency) + '</span>'
+            : '<span class="alt">none listed</span>') + '</span>' +
+        '<span class="chev">' + (isOpen ? "▲" : "▼") + '</span>' +
+      '</span>';
 
     var body = "";
     if (isOpen) {
@@ -560,44 +666,29 @@ footer{border-top:1px solid var(--n300);padding-block:22px 40px;font-size:.8rem;
       }
       body =
         '<div class="detail">' + body +
-        '<div class="foot-note">Totals include shipping where the seller states it, ' +
-        'in ' + esc(currencyWords(c.currency || SITE_CURRENCY)) + '. ' +
+        '<div class="foot-note">Totals include shipping where the seller states it, in ' +
+        esc(currencyWords(c.currency || SITE_CURRENCY)) + '. ' +
         (c.variant_count > 1
-          ? 'Each option is priced separately, because a different loft or flex ' +
-            'is a different club. '
-          : "") +
-        'Dimmed rows are listings we could not compare like for like — ' +
-        'a different quantity, or a price in another currency — so they are ' +
-        'left out of the figures above.</div></div>';
+          ? 'Each option is priced separately, because a different loft or flex is a ' +
+            'different club. ' : "") +
+        'Dimmed rows are listings we could not compare like for like, so they are left ' +
+        'out of the figures above.</div></div>';
     }
 
     return '' +
-      '<article class="card">' +
-        '<button class="card-head" type="button" data-id="' + esc(c.id) + '" aria-expanded="' + isOpen + '">' +
-          thumb +
-          '<span>' +
-            '<span class="title">' + esc(c.name) + lowBadge + '</span>' +
-            '<span class="meta">' + esc(spec.join(" · ")) + '</span>' +
+      '<article class="club">' +
+        '<button class="clubhead" type="button" data-id="' + esc(c.id) +
+          '" aria-expanded="' + isOpen + '">' +
+          shot +
+          '<span class="clubmain">' +
+            '<span class="row" style="gap:10px;flex-wrap:wrap">' +
+              '<span class="clubname">' + esc(c.name) + '</span>' + cut + low +
+            '</span>' +
+            '<span class="kick" style="display:block;margin-top:6px">' +
+              esc(spec.join(" · ")) + '</span>' +
+            '<span class="clubnote">' + esc(noteFor(c)) + '</span>' +
           '</span>' +
-          '<span class="prices">' +
-            '<span class="pblock">' +
-              '<span class="plabel">New from</span><br>' +
-              (c.new_from !== null && c.new_from !== undefined
-                ? '<span class="pval is-new num">' + money(c.new_from, c.currency) + '</span>'
-                : '<span class="pval none">—</span>') +
-            '</span>' +
-            '<span class="pblock">' +
-              '<span class="plabel">Used from</span><br>' +
-              (c.used_from !== null && c.used_from !== undefined
-                ? '<span class="pval is-used num">' + money(c.used_from, c.currency) + '</span>'
-                : '<span class="pval none">none listed</span>') +
-            '</span>' +
-            '<span class="pblock">' +
-              '<span class="plabel">Best gap</span><br>' +
-              '<span class="save num">' + money(c.spread, c.currency) + '</span>' +
-            '</span>' +
-            '<span class="chev">' + (isOpen ? "▲" : "▼") + '</span>' +
-          '</span>' +
+          prices +
         '</button>' + body +
       '</article>';
   }
@@ -605,13 +696,16 @@ footer{border-top:1px solid var(--n300);padding-block:22px 40px;font-size:.8rem;
   function render() {
     if (!DATA) return;
     var list = matching();
-    headEl.textContent = list.length ? headingText(list.length) : "No matches";
+    headEl.textContent = list.length ? headingText(list.length) : "no matches";
+    titleEl.textContent = currentQuery()
+      ? "Results for “" + currentQuery() + "”"
+      : (sortBy === "saving" ? "Today's biggest price gaps" : "Every seller, one row each");
 
     if (!list.length) {
       moreBtn.hidden = true;
       emptyState("Nothing matched that.",
-        "Try a brand or a model name — &ldquo;Ping&rdquo;, &ldquo;TSR2&rdquo;, &ldquo;Pro V1&rdquo; — or clear the filters. " +
-        "If it's a club we don't track yet, <a href=\"mailto:hello@thebagdropgolf.com\">tell us</a>.");
+        "Try a brand or a model name — &ldquo;Ping&rdquo;, &ldquo;TSR&rdquo;, " +
+        "&ldquo;Pro V1&rdquo; — or clear the filters.");
       return;
     }
 
@@ -619,21 +713,27 @@ footer{border-top:1px solid var(--n300);padding-block:22px 40px;font-size:.8rem;
 
     var left = list.length - shown;
     moreBtn.hidden = left <= 0;
-    if (left > 0) {
-      moreBtn.textContent = "Show " + Math.min(PAGE, left) + " more · " + left + " left";
-    }
+    if (left > 0) moreBtn.textContent = "Show " + Math.min(PAGE, left) + " more · " + left + " left";
   }
 
-  // Search, filter and sort live in the address bar, so a result can be
-  // shared as a link and the back button does what people expect.
+  // Search, filter and sort live in the address bar, so a result can be shared
+  // as a link and the back button does what people expect.
   function writeURL() {
     var u = new URLSearchParams();
     var q = currentQuery();
     if (q) u.set("q", q);
     if (typeFilter) u.set("type", typeFilter);
+    if (condFilter) u.set("cond", condFilter);
     if (sortBy !== "sellers") u.set("sort", sortBy);
     var s = u.toString();
     history.replaceState(null, "", s ? "?" + s : location.pathname);
+  }
+
+  function press(group, attr, value) {
+    Array.prototype.forEach.call(group.querySelectorAll(".chip"), function (b) {
+      b.setAttribute("aria-pressed",
+        (b.getAttribute(attr) || "") === value ? "true" : "false");
+    });
   }
 
   function readURL() {
@@ -641,13 +741,13 @@ footer{border-top:1px solid var(--n300);padding-block:22px 40px;font-size:.8rem;
     qInput.value = u.get("q") || "";
     var t = u.get("type") || "";
     typeFilter = TYPE_PLURAL[t] ? t : "";
+    var c = u.get("cond") || "";
+    condFilter = (c === "new" || c === "used") ? c : "";
     var s = u.get("sort") || "sellers";
     sortBy = SORTS[s] ? s : "sellers";
-    sortEl.value = sortBy;
-    Array.prototype.forEach.call(filters.querySelectorAll(".pill"), function (b) {
-      b.setAttribute("aria-pressed",
-        (b.getAttribute("data-type") || "") === typeFilter ? "true" : "false");
-    });
+    press(filters, "data-type", typeFilter);
+    press(conds, "data-cond", condFilter);
+    press(sorts, "data-sort", sortBy);
   }
 
   // Any change to what is being looked at starts again from the top page.
@@ -657,18 +757,20 @@ footer{border-top:1px solid var(--n300);padding-block:22px 40px;font-size:.8rem;
     render();
   }
 
-  // A dead image URL should degrade to the labelled tile, not a broken icon.
+  // --- events --------------------------------------------------------------
+
+  // A dead image URL should degrade to the hatched tile, not a broken icon.
   // `error` does not bubble, hence the capture phase.
   results.addEventListener("error", function (e) {
     var img = e.target;
     if (img && img.tagName === "IMG") {
       var tile = img.parentNode;
-      if (tile && tile.classList) tile.classList.add("no-img");
+      if (tile && tile.classList) tile.classList.add("empty");
     }
   }, true);
 
   results.addEventListener("click", function (e) {
-    var btn = e.target.closest(".card-head");
+    var btn = e.target.closest(".clubhead");
     if (!btn) return;
     var id = btn.getAttribute("data-id");
     open[id] = !open[id];
@@ -676,24 +778,70 @@ footer{border-top:1px solid var(--n300);padding-block:22px 40px;font-size:.8rem;
   });
 
   filters.addEventListener("click", function (e) {
-    var btn = e.target.closest(".pill");
+    var btn = e.target.closest(".chip");
     if (!btn) return;
     typeFilter = btn.getAttribute("data-type") || "";
-    Array.prototype.forEach.call(filters.querySelectorAll(".pill"), function (b) {
-      b.setAttribute("aria-pressed", b === btn ? "true" : "false");
-    });
+    press(filters, "data-type", typeFilter);
     refresh();
   });
 
-  sortEl.addEventListener("change", function () {
-    sortBy = sortEl.value;
+  conds.addEventListener("click", function (e) {
+    var btn = e.target.closest(".chip");
+    if (!btn) return;
+    condFilter = btn.getAttribute("data-cond") || "";
+    press(conds, "data-cond", condFilter);
     refresh();
   });
 
-  moreBtn.addEventListener("click", function () {
-    shown += PAGE;
-    render();
+  sorts.addEventListener("click", function (e) {
+    var btn = e.target.closest(".chip");
+    if (!btn) return;
+    sortBy = btn.getAttribute("data-sort") || "sellers";
+    press(sorts, "data-sort", sortBy);
+    refresh();
   });
+
+  document.getElementById("clear").addEventListener("click", function () {
+    qInput.value = ""; typeFilter = ""; condFilter = ""; sortBy = "sellers";
+    press(filters, "data-type", ""); press(conds, "data-cond", "");
+    press(sorts, "data-sort", "sellers");
+    refresh();
+  });
+
+  moreBtn.addEventListener("click", function () { shown += PAGE; render(); });
+
+  document.getElementById("refresh").addEventListener("click", function () {
+    location.reload();
+  });
+
+  document.getElementById("tosearch").addEventListener("click", function () {
+    qInput.focus();
+    qInput.scrollIntoView({ behavior: "smooth", block: "center" });
+  });
+
+  // Collapsed by default on a phone, always open on a wider screen. Re-checked
+  // on resize so rotating the handset does not leave it in the wrong state.
+  var side = document.getElementById("side");
+  var sideToggle = document.getElementById("sidetoggle");
+  var narrow = window.matchMedia("(max-width:760px)");
+
+  function syncSide() {
+    if (!narrow.matches) {
+      side.removeAttribute("data-collapsed");
+      sideToggle.setAttribute("aria-expanded", "true");
+      return;
+    }
+    var openNow = side.getAttribute("data-collapsed") !== "1";
+    sideToggle.setAttribute("aria-expanded", String(openNow));
+  }
+
+  sideToggle.addEventListener("click", function () {
+    side.setAttribute("data-collapsed", side.getAttribute("data-collapsed") === "1" ? "0" : "1");
+    syncSide();
+  });
+  if (narrow.addEventListener) narrow.addEventListener("change", syncSide);
+  if (narrow.matches) side.setAttribute("data-collapsed", "1");
+  syncSide();
 
   var timer;
   qInput.addEventListener("input", function () {
@@ -701,17 +849,19 @@ footer{border-top:1px solid var(--n300);padding-block:22px 40px;font-size:.8rem;
     timer = setTimeout(refresh, 140);
   });
 
-  // Pressing Enter on a phone should put the results in view and put the
-  // keyboard away, not submit a form to nowhere.
+  // Pressing Enter should put the results in view and the keyboard away, not
+  // submit a form to nowhere.
   formEl.addEventListener("submit", function (e) {
     e.preventDefault();
     clearTimeout(timer);
     refresh();
     qInput.blur();
-    headEl.scrollIntoView({ behavior: "smooth", block: "start" });
+    document.querySelector(".feedhead").scrollIntoView({ behavior: "smooth", block: "start" });
   });
 
   readURL();
+
+  // --- load ----------------------------------------------------------------
 
   fetch("prices.json", { cache: "no-cache" })
     .then(function (r) {
@@ -724,31 +874,45 @@ footer{border-top:1px solid var(--n300);padding-block:22px 40px;font-size:.8rem;
       SITE_CURRENCY = d.currency || "USD";
       var codes = Object.keys(d.currencies || {});
       MIXED = codes.length > 1;
-
-      var curEl = document.getElementById("currency");
-      curEl.textContent = MIXED
-        ? "Prices in " + codes.join(", ")
-        : "Prices in " + SITE_CURRENCY;
+      curEl.textContent = MIXED ? "Prices in " + codes.join(", ")
+                                : "Prices in " + SITE_CURRENCY;
       curEl.title = MIXED
         ? "This page holds more than one currency, so every figure names its own."
         : "All prices on this page are in " + currencyWords(SITE_CURRENCY) + ".";
-      curEl.hidden = false;
+
+      var when = ago(d.generated_at);
+      syncLine.textContent = "Prices checked " + when;
+      syncDet.textContent = d.retailer_count.toLocaleString() + " sellers · " +
+        d.offer_count.toLocaleString() + " listings · refreshed daily";
 
       // Counted from the data on every load, so these never go stale.
-      statsEl.innerHTML =
-        "<strong>" + d.club_count.toLocaleString() + "</strong> clubs from " +
-        "<strong>" + d.retailer_count.toLocaleString() + "</strong> sellers" +
-        " · prices updated " + esc(ago(d.generated_at));
+      var stats = [
+        [d.club_count.toLocaleString(), "clubs tracked"],
+        [d.retailer_count.toLocaleString(), "sellers checked"],
+        [d.offer_count.toLocaleString(), "live prices"],
+        [when, "last checked"]
+      ];
+      statsEl.innerHTML = stats.map(function (s) {
+        return '<div><b>' + esc(s[0]) + '</b><span class="kick">' + esc(s[1]) + '</span></div>';
+      }).join("");
+
+      document.getElementById("herolede").textContent =
+        "Bagdrop checks " + d.retailer_count.toLocaleString() + " sellers for the club you " +
+        "want, then shows the new price and the used price in the same row — with the " +
+        "condition, the seller, and the total you actually pay.";
+
+      document.getElementById("footblurb").textContent =
+        "New and used golf equipment prices from " + d.retailer_count.toLocaleString() +
+        " sellers, condition-matched and time-stamped.";
+
       render();
     })
     .catch(function () {
-      freshEl.textContent = "";
-      statsEl.textContent = "";
+      syncLine.textContent = "Prices are refreshing";
+      syncDet.textContent = "Give it a minute and reload the page.";
       headEl.textContent = "";
-      emptyState(
-        "Prices are refreshing.",
-        "The price list is being updated. Give it a minute and reload the page."
-      );
+      emptyState("Prices are refreshing.",
+        "The price list is being updated. Give it a minute and reload the page.");
     });
 })();
 </script>
