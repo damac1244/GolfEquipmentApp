@@ -330,6 +330,43 @@ def test_unconfigured_adapter_explains_itself():
 # Runner
 # --------------------------------------------------------------------------
 
+# --------------------------------------------------------------------------
+# What the error says when the provider refuses.
+#
+# A dead run cost a week of stale prices partly because the message named only
+# the API key, which was fine. The account was out of credits. Both providers
+# answer 403 for either, so the message has to name both.
+# --------------------------------------------------------------------------
+
+def test_a_refusal_names_credits_before_the_api_key():
+    import httpx
+    from app.adapters.base import AdapterError
+
+    class Refusing:
+        id = "stub"
+        def is_configured(self): return True
+        def search(self, client, query, limit):
+            request = httpx.Request("POST", "https://example.invalid/search")
+            response = httpx.Response(403, text="forbidden", request=request)
+            raise httpx.HTTPStatusError("403", request=request, response=response)
+
+    a = _stub_adapter(Path("."))
+    a.provider = Refusing()
+
+    try:
+        a.fetch(limit=10)
+    except AdapterError as exc:
+        message = str(exc).lower()
+    else:
+        raise AssertionError("a 403 must stop the run, not pass quietly")
+
+    assert "credit" in message, "the likeliest cause has to be in the message"
+    assert "key" in message, "the other likely cause belongs there too"
+    assert message.index("credit") < message.index("key"), (
+        "credits first: the key is usually the thing that is fine"
+    )
+
+
 def _run_standalone() -> int:
     tests = [(n, f) for n, f in sorted(globals().items())
              if n.startswith("test_") and callable(f)]

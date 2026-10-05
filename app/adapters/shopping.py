@@ -398,11 +398,25 @@ class ShoppingAdapter(Adapter):
                         spent += 1
                     except httpx.HTTPStatusError as exc:
                         if exc.response.status_code in (401, 403):
+                            # These providers answer 403 both for a bad key and
+                            # for an account that has run out of credits, and
+                            # the body rarely says which. Saying only "check
+                            # your API key" sends you to look at the one thing
+                            # that is probably fine — name both.
                             raise AdapterError(
-                                f"{self.provider.id}: auth rejected — check your API key"
+                                f"{self.provider.id}: refused the request (HTTP "
+                                f"{exc.response.status_code}). The two usual causes are "
+                                f"an account out of credits and a wrong or expired API "
+                                f"key, in that order — check the balance on your "
+                                f"{self.provider.id} dashboard first. "
+                                f"Response: {exc.response.text[:200]!r}"
                             ) from exc
                         if exc.response.status_code == 429:
-                            log.warning("%s rate limited; stopping early", self.provider.id)
+                            log.warning(
+                                "%s rate limited (HTTP 429) after %d queries; stopping "
+                                "early. Prices will be partial this run.",
+                                self.provider.id, ran,
+                            )
                             break
                         log.warning("query %r failed: %s", q, exc)
                         continue
