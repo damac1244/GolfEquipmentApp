@@ -16,12 +16,14 @@ ALL_ADAPTERS: list[Adapter] = [SampleAdapter()]
 # tests instead of failing at import time on a dependency it never uses.
 try:
     from .avantlink import AvantLinkAdapter
+    from .awin import AwinAdapter
     from .cj import CJAdapter
     from .impact import ImpactAdapter
     from .shopping import ShoppingAdapter
 
     ALL_ADAPTERS += [
         ShoppingAdapter(),      # web-wide prices, no partnership required
+        AwinAdapter(),          # 2nd Swing: used stock and real tracked links
         AvantLinkAdapter(),
         ImpactAdapter(),
         CJAdapter(),

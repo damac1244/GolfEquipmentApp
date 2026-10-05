@@ -32,6 +32,26 @@ CJ_PERSONAL_ACCESS_TOKEN = os.getenv("CJ_PERSONAL_ACCESS_TOKEN")
 CJ_COMPANY_ID = os.getenv("CJ_COMPANY_ID")
 CJ_PARTNER_IDS = os.getenv("CJ_PARTNER_IDS", "")
 
+# --- Awin (product data feeds) ---------------------------------------------
+# Where 2nd Swing runs its programme. The key is the datafeed key from
+# Create-a-Feed, not the publisher id and not the transactions API token.
+# https://help.awin.com/developers/docs/product-feed-list-download
+AWIN_API_KEY = os.getenv("AWIN_API_KEY")
+# Awin shows a ready-made "Feed List Download" URL in the Create-a-Feed screen,
+# with the key already embedded. Pasting that is better than having us rebuild
+# it: Awin has served this from more than one host, and a URL copied from the
+# account is right by definition. Set either this or AWIN_API_KEY.
+AWIN_FEED_LIST_URL = os.getenv("AWIN_FEED_LIST_URL", "")
+# Which advertisers to pull. Matched loosely against the feed list, so
+# "2nd Swing" catches "2nd Swing Golf". Empty means every joined feed.
+AWIN_ADVERTISERS = os.getenv("AWIN_ADVERTISERS", "2nd Swing")
+# Exact feed ids, if you would rather be precise than rely on the name.
+AWIN_FEED_IDS = os.getenv("AWIN_FEED_IDS", "")
+# Recorded on every Awin row so the export can mark which listings earn. It is
+# a flag, not an accounting figure -- 2nd Swing pays 15% on selected new
+# products and 5% otherwise, so the conservative number is the honest default.
+AWIN_DEFAULT_RATE = float(os.getenv("AWIN_DEFAULT_RATE", "0.05"))
+
 # --- Shopping search (web-wide prices, no partnership needed) --------------
 # Prices from every merchant, including ones you have no affiliate deal with.
 # These rows earn nothing -- see app/adapters/shopping.py for the tradeoffs.

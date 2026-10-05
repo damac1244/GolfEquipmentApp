@@ -197,3 +197,82 @@ that reason alone.
 Revenue is a separate question and comes later. Commission requires traffic,
 and the site has very little yet. Getting approved does not start the money; it
 removes the reason the money is currently impossible.
+
+---
+
+# Awin — approved (2nd Swing)
+
+Approved 5 October 2026. The adapter is written and registered
+(`app/adapters/awin.py`, 31 tests). Three steps to get real prices flowing.
+
+## 1. Find the datafeed API key
+
+In Awin: **Toolbox → Create-a-Feed**. Configure a feed — language English,
+select the 2nd Swing feed, select all columns, compression gzip — and generate
+the URL. The key is the long string after `/apikey/` in that URL.
+
+It is **not** your publisher ID, and **not** the API token used for transaction
+reporting. Those are different credentials and the adapter will tell you so if
+you use the wrong one.
+
+## 2. Add it as a GitHub secret
+
+Repo → Settings → Secrets and variables → Actions → New repository secret:
+
+- `AWIN_API_KEY` — the key from step 1
+
+Optional, both have sensible defaults:
+
+- `AWIN_ADVERTISERS` — defaults to `2nd Swing`, matched loosely, so it already
+  catches "2nd Swing Golf". Add more, comma separated, as you are approved.
+- `AWIN_FEED_IDS` — exact feed ids if you would rather not rely on the name.
+
+## 3. Two edits to the workflow
+
+`.github/workflows/refresh-prices.yml`, in the **Fetch prices** step.
+
+Add to the `env:` block:
+
+```yaml
+          AWIN_API_KEY: ${{ secrets.AWIN_API_KEY }}
+```
+
+And change the last line of that step from:
+
+```
+          python -m app.ingest --source shopping
+```
+
+to:
+
+```
+          python -m app.ingest
+```
+
+Without `--source`, every source with credentials runs — shopping keeps
+working and Awin joins it. Leave `--source shopping` in place and the Awin key
+is simply ignored, which is a confusing thing to debug.
+
+## 4. Check the real feed before trusting a scheduled run
+
+Column names vary by advertiser. Locally, with the key set:
+
+```
+python -m app.ingest --probe awin
+```
+
+That prints the first raw row and how it was parsed. The adapter looks for
+several plausible names per field, but if 2nd Swing uses something unexpected
+the probe output is what is needed to fix it — far easier than reading logs
+after a failed refresh.
+
+## What changes on the site
+
+- **Links that work.** Awin rows carry `aw_deep_link`, a tracked link to the
+  seller's own product page. Today all 4,778 links go to a Google search page.
+- **Used stock.** 2nd Swing is the largest used-club seller in golf and already
+  the biggest single source in the data at 610 listings. Used is currently 2%
+  of the site.
+- **Condition as a real field**, rather than something guessed from a title.
+- **Rows that earn.** These carry a commission rate, so the export can tell a
+  paying link from a free one.
