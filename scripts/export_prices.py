@@ -75,6 +75,138 @@ MIN_OFFERS_FOR_MEDIAN = 4
 SMALL_GROUP_MAX_RATIO = 0.35
 
 
+FLEX_WORDS = {"R": "Regular", "S": "Stiff", "X": "X-Stiff", "TX": "Tour X",
+              "A": "Senior", "L": "Ladies"}
+
+TYPE_LABELS = {
+    "driver": "Driver", "fairway_wood": "Fairway Wood", "hybrid": "Hybrid",
+    "iron_set": "Irons", "single_iron": "Iron", "wedge": "Wedge",
+    "putter": "Putter", "golf_balls": "Golf Balls",
+}
+
+# Only iron sets carry the year in their identity, because only there does the
+# generation change the club. Everywhere else a year in the title is just how
+# one shop writes the same club, so it must not split the family.
+YEAR_IS_PART_OF_THE_CLUB = {"iron_set", "single_iron"}
+
+
+def variant_label(p) -> str:
+    """
+    What makes this variant different from its siblings: "4-PW, Stiff, RH".
+
+    Empty when no seller stated a spec. That is not a failure — roughly half of
+    all listings never say the loft — and the page says so out loud rather than
+    pretending the row is the definitive one.
+    """
+    spec: list[str] = []
+    if p["set_composition"]:
+        spec.append(p["set_composition"])
+    if p["loft"] is not None:
+        spec.append(f'{p["loft"]:g}°')
+    if p["bounce"]:
+        spec.append(f'{p["bounce"]} bounce')
+    if p["length"]:
+        spec.append(f'{p["length"]:g}"')
+    if p["flex"]:
+        spec.append(FLEX_WORDS.get(p["flex"], p["flex"]))
+    if p["dexterity"]:
+        spec.append(p["dexterity"])
+    return ", ".join(spec)
+
+
+def club_key(v: dict) -> tuple:
+    """The club a variant belongs to — everything except the fitting specs."""
+    year = v["year"] if v["type"] in YEAR_IS_PART_OF_THE_CLUB else None
+    return (v["brand"], v["type"], (v["model"] or "").strip(), year)
+
+
+def club_name(v: dict) -> str:
+    """
+    "TaylorMade P790 Irons (2023)".
+
+    The year belongs in the name whenever it is part of the identity. Without
+    it four generations of P790 all rendered as the same title and the site
+    looked like it was showing the same club four times.
+    """
+    bits = [v["brand"] or "", (v["model"] or "").title()]
+    if v["type"] in TYPE_LABELS:
+        bits.append(TYPE_LABELS[v["type"]])
+    name = " ".join(b for b in bits if b).strip() or "Unknown club"
+    if v["year"] and v["type"] in YEAR_IS_PART_OF_THE_CLUB:
+        name += f' ({v["year"]})'
+    return name
+
+
+def group_into_clubs(variants: list[dict]) -> list[dict]:
+    """
+    Collapse fitting variants into one club.
+
+    Sellers describe the same club at wildly different levels of detail: one
+    says "Callaway Elyte Driver", the next "Elyte Driver 10.5° Regular RH".
+    Both are right, and the matcher is right to keep them apart — a 9° stiff is
+    not a 12° ladies, and quoting one price for both would be a lie. But it
+    left ten rows for one club, the sellers scattered between them, and no row
+    with enough offers to be worth reading.
+
+    So identity stays strict and presentation groups. The club is what someone
+    searches for; the variant is what they buy.
+    """
+    groups: dict[tuple, list[dict]] = {}
+    for v in variants:
+        groups.setdefault(club_key(v), []).append(v)
+
+    clubs = []
+    for key, vs in groups.items():
+        # Most specific first: a labelled variant is more useful at the top
+        # than the "spec not stated" pile, and cheapest first within that.
+        vs.sort(key=lambda v: (not v["label"], v["best"]))
+
+        comparable = [o for v in vs for o in v["offers"] if not o["suspect"]]
+        if not comparable:
+            comparable = [o for v in vs for o in v["offers"]]
+
+        best = min(o["total"] for o in comparable)
+
+        # The saving we advertise is the biggest gap WITHIN one variant — a
+        # price difference on an identical item, which someone can actually
+        # act on. Measuring across variants would resurrect the fake-saving
+        # problem in a new costume: a 9° stiff against a 12° ladies is not a
+        # deal, it is two different clubs.
+        deepest = max(vs, key=lambda v: v["spread"])
+
+        new_from = [v["new_from"] for v in vs if v["new_from"] is not None]
+        used_from = [v["used_from"] for v in vs if v["used_from"] is not None]
+
+        clubs.append({
+            "id": f'c{vs[0]["id"]}',
+            "name": club_name(vs[0]),
+            "brand": vs[0]["brand"],
+            "type": vs[0]["type"],
+            "model": vs[0]["model"],
+            "year": key[3],
+            "image": next((v["image"] for v in vs if v["image"]), None),
+            "currency": vs[0]["currency"],
+            # Distinct sellers across the whole club. This is the number the
+            # old layout could never show: the sellers were real, they were
+            # just split across rows.
+            "sellers": len({o["retailer"] for o in comparable}),
+            "variant_count": len(vs),
+            "best": best,
+            "spread": deepest["spread"],
+            "spread_pct": deepest["spread_pct"],
+            "new_from": min(new_from) if new_from else None,
+            "used_from": min(used_from) if used_from else None,
+            "suspect_count": sum(v["suspect_count"] for v in vs),
+            "is_low": any(v["is_low"] for v in vs),
+            "lowest_90d": min([v["lowest_90d"] for v in vs
+                               if v["lowest_90d"] is not None], default=None),
+            "variants": vs,
+        })
+
+    clubs.sort(key=lambda c: c["spread"], reverse=True)
+    return clubs
+
+
 def median(values: list[float]) -> float:
     ordered = sorted(values)
     n = len(ordered)
@@ -170,7 +302,8 @@ def build(conn: sqlite3.Connection, min_offers: int, include_used: bool) -> dict
 
     rows = conn.execute("""
         SELECT id, display_name, brand, club_type, model, loft, flex,
-               dexterity, set_composition, image_url, msrp
+               dexterity, set_composition, bounce, length, year,
+               image_url, msrp
           FROM products ORDER BY display_name
     """).fetchall()
 
@@ -243,7 +376,13 @@ def build(conn: sqlite3.Connection, min_offers: int, include_used: bool) -> dict
             "flex": p["flex"],
             "dex": p["dexterity"],
             "set": p["set_composition"],
+            "bounce": p["bounce"],
+            "length": p["length"],
+            "year": p["year"],
             "image": p["image_url"],
+            # What distinguishes this variant from its siblings, e.g.
+            # "10.5°, Regular, RH". Empty when no seller stated a spec.
+            "label": variant_label(p),
             # The currency the headline figures are quoted in. Comparable
             # offers share one by construction, so the first is the group's.
             "currency": comparable[0]["currency"],
@@ -266,7 +405,7 @@ def build(conn: sqlite3.Connection, min_offers: int, include_used: bool) -> dict
             "offers": offers,
         })
 
-    products.sort(key=lambda x: x["spread"], reverse=True)
+    clubs = group_into_clubs(products)
 
     # What currency is this site in? Counted rather than assumed, so the page
     # states what the data actually holds. `currencies` lets the front end tell
@@ -280,12 +419,14 @@ def build(conn: sqlite3.Connection, min_offers: int, include_used: bool) -> dict
 
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "club_count": len(clubs),
+        # Variants: the same club at a specific loft, flex and dexterity.
         "product_count": len(products),
         "offer_count": sum(len(p["offers"]) for p in products),
         "retailer_count": len({o["retailer"] for p in products for o in p["offers"]}),
         "currency": primary,
         "currencies": dict(sorted(tally.items(), key=lambda kv: -kv[1])),
-        "products": products,
+        "clubs": clubs,
     }
 
 
@@ -305,7 +446,7 @@ def main() -> None:
     finally:
         conn.close()
 
-    if not payload["products"]:
+    if not payload["clubs"]:
         print("No products to export. Run an ingest first:")
         print("  python -m app.ingest --source shopping")
         raise SystemExit(1)
@@ -315,8 +456,8 @@ def main() -> None:
     out.write_text(json.dumps(payload, separators=(",", ":")))
 
     size_mb = out.stat().st_size / 1_048_576
-    print(f"{payload['product_count']} products, {payload['offer_count']} offers "
-          f"from {payload['retailer_count']} retailers")
+    print(f"{payload['club_count']} clubs ({payload['product_count']} variants), "
+          f"{payload['offer_count']} offers from {payload['retailer_count']} retailers")
     mix = payload["currencies"]
     print("currency: " + ", ".join(f"{c} x{n}" for c, n in mix.items()))
     if len(mix) > 1:

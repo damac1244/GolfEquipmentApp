@@ -196,6 +196,16 @@ tr.susp td{opacity:.5}
 .go:hover{opacity:.87;color:var(--deep)}
 .foot-note{padding:11px 18px;font-size:.78rem;color:var(--n600);background:var(--raised)}
 
+/* one fitting option inside a club */
+.variant + .variant{border-top:1px solid var(--n300)}
+.vhead{
+  display:flex;align-items:baseline;justify-content:space-between;gap:12px;
+  padding:10px 18px;background:var(--bg);
+}
+.vspec{font-size:.86rem;font-weight:600;letter-spacing:-.005em}
+.vspec.unstated{font-weight:500;color:var(--n600);font-style:italic}
+.vcount{font-size:.76rem;color:var(--n600);white-space:nowrap}
+
 /* states */
 .state{
   border:1px dashed var(--n400);border-radius:10px;padding:38px 24px;text-align:center;
@@ -337,7 +347,7 @@ footer{border-top:1px solid var(--n300);padding-block:22px 40px;font-size:.8rem;
   // saving. The biggest gaps are also where a mismatched listing is most likely
   // to be hiding, and the homepage should lead with the numbers we trust most.
   var SORTS = {
-    sellers: function (a, b) { return b.retailers - a.retailers || b.spread - a.spread; },
+    sellers: function (a, b) { return b.sellers - a.sellers || b.spread - a.spread; },
     saving:  function (a, b) { return b.spread - a.spread; },
     price:   function (a, b) { return a.best - b.best; }
   };
@@ -436,17 +446,41 @@ footer{border-top:1px solid var(--n300);padding-block:22px 40px;font-size:.8rem;
     return '<span class="flag">' + esc(why) + '</span>';
   }
 
-  function offerRows(p) {
+  function currentQuery() {
+    return qInput.value.trim();
+  }
+
+  function matching() {
+    var q = currentQuery().toLowerCase();
+    var words = q ? q.split(/\s+/) : [];
+    var list = DATA.clubs.filter(function (p) {
+      if (typeFilter && p.type !== typeFilter) return false;
+      if (!words.length) return true;
+      var hay = (p.name + " " + (p.brand || "") + " " + (p.model || "")).toLowerCase();
+      return words.every(function (w) { return hay.indexOf(w) !== -1; });
+    });
+    return list.slice().sort(SORTS[sortBy] || SORTS.sellers);
+  }
+
+  function headingText(n) {
+    var q = currentQuery();
+    var noun = typeFilter ? (TYPE_PLURAL[typeFilter] || "clubs") : (n === 1 ? "club" : "clubs");
+    if (typeFilter && n === 1) noun = noun.replace(/s$/, "");
+    if (q) return n + " " + noun + " matching “" + q + "”";
+    return n + " " + noun;
+  }
+
+  function offerRows(v) {
     // The highlighted row is the best offer we can stand behind, which is not
     // always the cheapest one on the table.
     var best = null;
-    for (var b = 0; b < p.offers.length; b++) {
-      if (!p.offers[b].suspect) { best = p.offers[b]; break; }
+    for (var b = 0; b < v.offers.length; b++) {
+      if (!v.offers[b].suspect) { best = v.offers[b]; break; }
     }
 
     var html = "";
-    for (var i = 0; i < p.offers.length; i++) {
-      var o = p.offers[i];
+    for (var i = 0; i < v.offers.length; i++) {
+      var o = v.offers[i];
       var isNew = o.condition === "new";
       var cls = isNew ? "is-new" : "is-used";
       var ship = o.shipping === null || o.shipping === undefined
@@ -466,101 +500,106 @@ footer{border-top:1px solid var(--n300);padding-block:22px 40px;font-size:.8rem;
     return html;
   }
 
-  function card(p) {
-    var isOpen = !!open[p.id];
-    // The title already carries brand, model, loft, flex and dexterity.
-    // Repeating them here wastes the line — say what the title cannot.
-    // Only listings that survived the comparison checks. Advertising a used
-    // option that turns out to be a lone iron or a foreign price is worse
-    // than saying "new only".
-    var usedCount = p.offers.filter(function (o) {
-      return o.condition !== "new" && !o.suspect;
-    }).length;
-    var spec = [p.retailers + (p.retailers === 1 ? " seller" : " sellers")];
-    if (usedCount) {
-      spec.push(usedCount + " used listing" + (usedCount === 1 ? "" : "s"));
-    } else {
-      spec.push("new only");
+  function variantBlock(v, showHead, currency) {
+    // Half of all listings never state a loft or a flex. That is worth saying
+    // plainly: the row is still a real comparison, it just covers every
+    // fitting of the club rather than one.
+    var head = "";
+    if (showHead) {
+      var label = v.label
+        ? '<span class="vspec">' + esc(v.label) + '</span>'
+        : '<span class="vspec unstated">Spec not stated</span>';
+      head =
+        '<div class="vhead">' + label +
+        '<span class="vcount num">' + v.retailers +
+        (v.retailers === 1 ? " seller" : " sellers") + '</span></div>';
     }
-    if (p.spread_pct >= 15) spec.push(p.spread_pct + "% between cheapest and dearest");
 
-    var lowBadge = p.is_low ? '<span class="badge low">Lowest in 90 days</span>' : "";
+    return '<div class="variant">' + head +
+      '<div class="scroller"><table>' +
+        '<thead><tr><th scope="col">Seller</th><th scope="col">Condition</th>' +
+        '<th scope="col" class="r">Total' +
+        (MIXED ? "" : " (" + esc(v.currency || currency || SITE_CURRENCY) + ")") +
+        '</th><th scope="col" class="r"></th></tr></thead>' +
+        '<tbody>' + offerRows(v) + '</tbody></table></div>' +
+      '</div>';
+  }
 
-    // The photo sits next to the title, so alt text would only repeat it.
-    // referrerpolicy matters: the image hosts serve nothing without it.
-    var ph = '<span class="ph">' + esc(TYPE_LABEL[p.type] || "Club") + '</span>';
-    var thumb = p.image
-      ? '<span class="thumb"><img src="' + esc(p.image) + '" alt="" loading="lazy" ' +
+  function card(c) {
+    var isOpen = !!open[c.id];
+
+    // Say what the title cannot: how much comparing there is behind this club.
+    var spec = [c.sellers + (c.sellers === 1 ? " seller" : " sellers")];
+    if (c.variant_count > 1) {
+      spec.push(c.variant_count + " options");
+    }
+    var usedCount = 0;
+    for (var i = 0; i < c.variants.length; i++) {
+      for (var j = 0; j < c.variants[i].offers.length; j++) {
+        var o = c.variants[i].offers[j];
+        if (o.condition !== "new" && !o.suspect) usedCount++;
+      }
+    }
+    spec.push(usedCount ? usedCount + " used listing" + (usedCount === 1 ? "" : "s")
+                        : "new only");
+    if (c.spread_pct >= 15) spec.push(c.spread_pct + "% between cheapest and dearest");
+
+    var lowBadge = c.is_low ? '<span class="badge low">Lowest in 90 days</span>' : "";
+
+    var ph = '<span class="ph">' + esc(TYPE_LABEL[c.type] || "Club") + '</span>';
+    var thumb = c.image
+      ? '<span class="thumb"><img src="' + esc(c.image) + '" alt="" loading="lazy" ' +
         'decoding="async" referrerpolicy="no-referrer">' + ph + '</span>'
       : '<span class="thumb no-img">' + ph + '</span>';
 
+    var body = "";
+    if (isOpen) {
+      var showHeads = c.variants.length > 1;
+      for (var k = 0; k < c.variants.length; k++) {
+        body += variantBlock(c.variants[k], showHeads, c.currency);
+      }
+      body =
+        '<div class="detail">' + body +
+        '<div class="foot-note">Totals include shipping where the seller states it, ' +
+        'in ' + esc(currencyWords(c.currency || SITE_CURRENCY)) + '. ' +
+        (c.variant_count > 1
+          ? 'Each option is priced separately, because a different loft or flex ' +
+            'is a different club. '
+          : "") +
+        'Dimmed rows are listings we could not compare like for like — ' +
+        'a different quantity, or a price in another currency — so they are ' +
+        'left out of the figures above.</div></div>';
+    }
+
     return '' +
       '<article class="card">' +
-        '<button class="card-head" type="button" data-id="' + p.id + '" aria-expanded="' + isOpen + '">' +
+        '<button class="card-head" type="button" data-id="' + esc(c.id) + '" aria-expanded="' + isOpen + '">' +
           thumb +
           '<span>' +
-            '<span class="title">' + esc(p.name) + lowBadge + '</span>' +
+            '<span class="title">' + esc(c.name) + lowBadge + '</span>' +
             '<span class="meta">' + esc(spec.join(" · ")) + '</span>' +
           '</span>' +
           '<span class="prices">' +
             '<span class="pblock">' +
               '<span class="plabel">New from</span><br>' +
-              (p.new_from !== null && p.new_from !== undefined
-                ? '<span class="pval is-new num">' + money(p.new_from, p.currency) + '</span>'
+              (c.new_from !== null && c.new_from !== undefined
+                ? '<span class="pval is-new num">' + money(c.new_from, c.currency) + '</span>'
                 : '<span class="pval none">—</span>') +
             '</span>' +
             '<span class="pblock">' +
               '<span class="plabel">Used from</span><br>' +
-              (p.used_from !== null && p.used_from !== undefined
-                ? '<span class="pval is-used num">' + money(p.used_from, p.currency) + '</span>'
+              (c.used_from !== null && c.used_from !== undefined
+                ? '<span class="pval is-used num">' + money(c.used_from, c.currency) + '</span>'
                 : '<span class="pval none">none listed</span>') +
             '</span>' +
             '<span class="pblock">' +
-              '<span class="plabel">Spread</span><br>' +
-              '<span class="save num">' + money(p.spread, p.currency) + '</span>' +
+              '<span class="plabel">Best gap</span><br>' +
+              '<span class="save num">' + money(c.spread, c.currency) + '</span>' +
             '</span>' +
             '<span class="chev">' + (isOpen ? "▲" : "▼") + '</span>' +
           '</span>' +
-        '</button>' +
-        (isOpen
-          ? '<div class="detail"><div class="scroller"><table>' +
-              '<thead><tr><th scope="col">Seller</th><th scope="col">Condition</th>' +
-              '<th scope="col" class="r">Total' +
-              (MIXED ? "" : " (" + esc(p.currency || SITE_CURRENCY) + ")") +
-              '</th><th scope="col" class="r"></th></tr></thead>' +
-              '<tbody>' + offerRows(p) + '</tbody></table></div>' +
-              '<div class="foot-note">Totals include shipping where the seller states it, ' +
-              'in ' + esc(currencyWords(p.currency || SITE_CURRENCY)) + '. ' +
-              'Condition wording is normalised across sellers. ' +
-              'Dimmed rows are listings we could not compare like for like — ' +
-              'a different quantity, or a price in another currency — so they ' +
-              'are left out of the figures above.</div></div>'
-          : "") +
+        '</button>' + body +
       '</article>';
-  }
-
-  function currentQuery() {
-    return qInput.value.trim();
-  }
-
-  function matching() {
-    var q = currentQuery().toLowerCase();
-    var words = q ? q.split(/\s+/) : [];
-    var list = DATA.products.filter(function (p) {
-      if (typeFilter && p.type !== typeFilter) return false;
-      if (!words.length) return true;
-      var hay = (p.name + " " + (p.brand || "") + " " + (p.model || "")).toLowerCase();
-      return words.every(function (w) { return hay.indexOf(w) !== -1; });
-    });
-    return list.slice().sort(SORTS[sortBy] || SORTS.sellers);
-  }
-
-  function headingText(n) {
-    var q = currentQuery();
-    var noun = typeFilter ? (TYPE_PLURAL[typeFilter] || "clubs") : (n === 1 ? "club" : "clubs");
-    if (typeFilter && n === 1) noun = noun.replace(/s$/, "");
-    if (q) return n + " " + noun + " matching “" + q + "”";
-    return n + " " + noun;
   }
 
   function render() {
@@ -697,7 +736,7 @@ footer{border-top:1px solid var(--n300);padding-block:22px 40px;font-size:.8rem;
 
       // Counted from the data on every load, so these never go stale.
       statsEl.innerHTML =
-        "<strong>" + d.product_count.toLocaleString() + "</strong> clubs from " +
+        "<strong>" + d.club_count.toLocaleString() + "</strong> clubs from " +
         "<strong>" + d.retailer_count.toLocaleString() + "</strong> sellers" +
         " · prices updated " + esc(ago(d.generated_at));
       render();

@@ -37,7 +37,8 @@ except ModuleNotFoundError:  # pragma: no cover
     pytest = _Shim()  # type: ignore[assignment]
 
 from export_prices import (  # noqa: E402
-    flag_foreign_currencies, flag_quantity_outliers, median,
+    club_key, club_name, flag_foreign_currencies, flag_quantity_outliers,
+    group_into_clubs, median, variant_label,
 )
 
 
@@ -214,6 +215,160 @@ def test_flagging_shrinks_the_headline_spread():
     assert before > 1800 and after < 1000, f"{before:.0f} -> {after:.0f}"
 
 
+# --------------------------------------------------------------------------
+# Grouping fitting variants into one club.
+#
+# Sellers describe the same club at different levels of detail. The matcher is
+# right to keep a 9° stiff apart from a 12° ladies -- one price for both would
+# be a lie -- but that left one club spread over ten rows, its sellers split
+# between them, and not one row worth reading. Identity stays strict; the
+# presentation groups.
+# --------------------------------------------------------------------------
+
+def _variant(model="elyte", type_="driver", brand="Callaway", label="",
+             best=400.0, spread=0.0, retailers=1, year=None, offers=None,
+             new_from=None, used_from=None, vid=1):
+    return {
+        "id": vid, "brand": brand, "type": type_, "model": model, "year": year,
+        "label": label, "best": best, "spread": spread,
+        "spread_pct": round(spread / (best + spread) * 100, 1) if best + spread else 0.0,
+        "retailers": retailers, "image": None, "currency": "USD",
+        "new_from": new_from if new_from is not None else best,
+        "used_from": used_from, "suspect_count": 0, "is_low": False,
+        "lowest_90d": None,
+        "offers": offers if offers is not None else [
+            # Distinct shops per variant unless a test passes its own offers:
+            # overlapping names would quietly test the wrong thing.
+            {"retailer": "Shop %d-%d" % (vid, i), "total": best + i,
+             "condition": "new", "suspect": False, "currency": "USD"}
+            for i in range(retailers)
+        ],
+    }
+
+
+def test_fitting_specs_do_not_start_a_new_club():
+    a = _variant(label="9°, Stiff, RH")
+    b = _variant(label="12°, Ladies, RH")
+    assert club_key(a) == club_key(b)
+
+
+def test_a_different_model_is_a_different_club():
+    assert club_key(_variant(model="elyte")) != club_key(_variant(model="paradym"))
+
+
+def test_iron_generations_stay_separate_clubs():
+    """2019 and 2025 P790s are different clubs and different price tiers."""
+    a = _variant(model="p790", type_="iron_set", year=2019)
+    b = _variant(model="p790", type_="iron_set", year=2025)
+    assert club_key(a) != club_key(b)
+    assert "2019" in club_name(a) and "2025" in club_name(b)
+
+
+def test_a_year_in_a_driver_title_does_not_split_the_club():
+    """Only irons carry the generation. Elsewhere a year is just wording."""
+    a = _variant(model="qi35", type_="driver", year=2025)
+    b = _variant(model="qi35", type_="driver", year=None)
+    assert club_key(a) == club_key(b)
+    assert "2025" not in club_name(a)
+
+
+def test_club_name_reads_like_a_club():
+    assert club_name(_variant(brand="Callaway", model="elyte", type_="driver")) \
+        == "Callaway Elyte Driver"
+
+
+# --------------------------------------------------------------------------
+# The number the old layout could never show
+# --------------------------------------------------------------------------
+
+def test_sellers_are_pooled_across_variants():
+    """
+    The whole point. Four sellers on one loft and three on another is seven
+    sellers for that club, not two separate rows of "a few".
+    """
+    a = _variant(label="9°, Stiff, RH", retailers=4, best=400.0, vid=1)
+    b = _variant(label="10.5°, Regular, RH", retailers=3, best=420.0, vid=2)
+    club = group_into_clubs([a, b])[0]
+    assert club["variant_count"] == 2
+    assert club["sellers"] == 7
+    assert club["best"] == 400.0
+
+
+def test_the_same_seller_on_two_variants_is_counted_once():
+    shared = [{"retailer": "Same Shop", "total": 400.0, "condition": "new",
+               "suspect": False, "currency": "USD"}]
+    a = _variant(label="9°", offers=shared, best=400.0, vid=1)
+    b = _variant(label="10.5°", offers=list(shared), best=400.0, vid=2)
+    assert group_into_clubs([a, b])[0]["sellers"] == 1
+
+
+def test_the_advertised_saving_is_never_measured_across_variants():
+    """
+    The fake-saving bug in a new costume. A cheap 12° ladies next to a dear 9°
+    tour head is not a deal, it is two different clubs. The number we show has
+    to be a gap someone can actually act on: the biggest spread WITHIN one
+    fitting.
+    """
+    cheap = _variant(label="12°, Ladies, RH", best=200.0, spread=10.0, vid=1)
+    dear = _variant(label="9°, Tour, RH", best=900.0, spread=50.0, vid=2)
+    club = group_into_clubs([cheap, dear])[0]
+    assert club["spread"] == 50.0, "must be a within-variant gap, not 900 - 200"
+    assert club["best"] == 200.0
+
+
+def test_labelled_variants_come_before_the_unstated_pile():
+    unstated = _variant(label="", best=300.0, vid=1)
+    stated = _variant(label="10.5°, Stiff, RH", best=500.0, vid=2)
+    club = group_into_clubs([unstated, stated])[0]
+    assert club["variants"][0]["label"] == "10.5°, Stiff, RH"
+    assert club["variants"][-1]["label"] == ""
+
+
+def test_a_club_with_one_variant_still_works():
+    club = group_into_clubs([_variant(label="9°, Stiff, RH", retailers=3)])[0]
+    assert club["variant_count"] == 1
+    assert club["sellers"] == 3
+
+
+def test_suspect_offers_do_not_inflate_the_seller_count():
+    offers = [
+        {"retailer": "Real", "total": 400.0, "condition": "new",
+         "suspect": False, "currency": "USD"},
+        {"retailer": "Mismatch", "total": 40.0, "condition": "new",
+         "suspect": True, "currency": "USD"},
+    ]
+    club = group_into_clubs([_variant(offers=offers, best=400.0)])[0]
+    assert club["sellers"] == 1
+    assert club["best"] == 400.0, "a flagged row must not become the headline price"
+
+
+# --------------------------------------------------------------------------
+# Variant labels
+# --------------------------------------------------------------------------
+
+def _row(**kw):
+    base = {"set_composition": None, "loft": None, "bounce": None,
+            "length": None, "flex": None, "dexterity": None}
+    base.update(kw)
+    return base
+
+
+def test_variant_label_reads_in_the_order_people_say_it():
+    assert variant_label(_row(set_composition="4-PW", flex="S", dexterity="RH")) \
+        == "4-PW, Stiff, RH"
+    assert variant_label(_row(loft=10.5, flex="R", dexterity="RH")) \
+        == "10.5°, Regular, RH"
+
+
+def test_a_whole_number_loft_loses_its_decimal():
+    assert variant_label(_row(loft=9.0)) == "9°"
+
+
+def test_no_stated_spec_gives_an_empty_label():
+    """Not a failure — half of all listings never say. The page says so."""
+    assert variant_label(_row()) == ""
+
+
 def _run_standalone() -> int:
     tests = [(n, f) for n, f in sorted(globals().items())
              if n.startswith("test_") and callable(f)]
@@ -242,3 +397,4 @@ def _run_standalone() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(_run_standalone())
+
