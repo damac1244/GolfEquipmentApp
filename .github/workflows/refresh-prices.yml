@@ -139,11 +139,11 @@ jobs:
           import json, pathlib
           d = json.loads(pathlib.Path("site/prices.json").read_text())
           print(f"### Prices refreshed\n")
-          print(f"- **{d['product_count']}** products")
+          print(f"- **{d['club_count']}** clubs ({d['product_count']} variants)")
           print(f"- **{d['offer_count']}** offers")
           print(f"- **{d['retailer_count']}** retailers")
           print(f"- Generated `{d['generated_at']}`\n")
-          top = d["products"][:5]
+          top = d["clubs"][:5]
           if top:
               print("| Club | Best | Spread |")
               print("|---|---|---|")
