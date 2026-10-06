@@ -78,6 +78,7 @@ jobs:
         env:
           GOLF_SHOPPING_PROVIDER: serper
           SERPER_KEY: ${{ secrets.SERPER_KEY }}
+          AWIN_FEED_LIST_URL: ${{ secrets.AWIN_FEED_LIST_URL }}
           GOLF_SHOPPING_COUNTRY: us
           # Cache is per-run here (fresh container each time), so this only
           # prevents duplicate calls within a single run.
@@ -88,8 +89,7 @@ jobs:
             echo "::error::Settings → Secrets and variables → Actions."
             exit 1
           fi
-          python -m app.ingest --source shopping
-
+          python -m app.ingest
       # One extra API call that saves the provider's untouched response as a
       # downloadable file. Worth it: the response shape is the thing we cannot
       # see from outside, and guessing at it costs whole runs.
