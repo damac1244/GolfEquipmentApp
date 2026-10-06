@@ -206,7 +206,10 @@ class AwinAdapter(Adapter):
                 advertiser = pick(feed, ("Advertiser Name", "advertiser_name")) or "Unknown"
                 url = pick(feed, ("URL", "url", "download_url"))
                 if not url:
-                    log.warning("awin: feed for %s has no download URL", advertiser)
+                    log.error(
+                        "awin: the feed row for %s has no download URL. Columns "
+                        "present: %s", advertiser, list(feed.keys()),
+                    )
                     continue
                 offers.extend(self._feed_rows(client, url, advertiser, limit - len(offers)))
                 if len(offers) >= limit:
@@ -216,6 +219,7 @@ class AwinAdapter(Adapter):
         return offers[:limit]
 
     def _feed_list(self, client: httpx.Client) -> list[dict]:
+        log.info("awin: fetching the feed list")
         response = client.get(self._list_url())
         if response.status_code in (401, 403):
             raise AdapterError(
@@ -225,7 +229,26 @@ class AwinAdapter(Adapter):
             )
         response.raise_for_status()
         text = decompress(response.content)
-        return list(csv.DictReader(io.StringIO(text)))
+        rows = list(csv.DictReader(io.StringIO(text)))
+
+        # Say what came back. Every failure from here on is either a column
+        # named something unexpected or an advertiser named something
+        # unexpected, and both are invisible without this.
+        if not rows:
+            log.warning("awin: the feed list was empty. First 200 bytes: %r", text[:200])
+            return rows
+        log.info("awin: feed list columns: %s", list(rows[0].keys()))
+        for row in rows[:10]:
+            log.info(
+                "awin: feed | advertiser=%r status=%r id=%r url=%s",
+                pick(row, ("Advertiser Name", "advertiser_name")),
+                pick(row, ("Membership Status", "membership_status")),
+                pick(row, ("Feed ID", "feed_id", "fid")),
+                "yes" if pick(row, ("URL", "url", "download_url")) else "MISSING",
+            )
+        if len(rows) > 10:
+            log.info("awin: ...and %d more feeds", len(rows) - 10)
+        return rows
 
     def _feed_rows(
         self, client: httpx.Client, url: str, advertiser: str, remaining: int
