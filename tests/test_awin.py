@@ -220,6 +220,60 @@ def test_no_matching_feed_says_so_clearly():
 
 
 # --------------------------------------------------------------------------
+# Name matching.
+#
+# The live account returned 907 feeds and matched none of them. A plain
+# substring test on "2nd Swing" misses "2ndSwing.com", and checking membership
+# status before the name turned every unfamiliar status value into a silent
+# zero result out of nine hundred rows.
+# --------------------------------------------------------------------------
+
+@pytest.mark.parametrize("advertiser", [
+    "2nd Swing Golf", "2ndSwing.com", "2nd-Swing", "2ND SWING GOLF US",
+    "2nd  Swing  Golf",
+])
+def test_the_advertiser_is_found_however_it_is_punctuated(advertiser):
+    rows = FEED_LIST.replace("2nd Swing Golf", advertiser)
+    a, _ = _adapter(client=StubClient(list_csv=rows))
+    assert a.fetch(), f"did not match {advertiser!r}"
+
+
+def test_an_unfamiliar_membership_status_does_not_silently_drop_the_feed():
+    """
+    Status wording varies by account and region. A name match is the strong
+    signal; an odd status is worth a warning and one wasted request, not a
+    zero result nobody can explain.
+    """
+    rows = FEED_LIST.replace(",joined,", ",Programme Approved,")
+    a, _ = _adapter(client=StubClient(list_csv=rows))
+    assert a.fetch()
+
+
+def test_a_miss_names_the_closest_advertisers():
+    from app.adapters.base import AdapterError
+    rows = FEED_LIST.replace("2nd Swing Golf", "2nd Swing Golf Europe")
+    a, _ = _adapter(client=StubClient(list_csv=rows), advertisers="2nd Swong")
+    try:
+        a.fetch()
+    except AdapterError as exc:
+        assert "closest names" in str(exc).lower(), str(exc)
+        assert "2nd Swing Golf Europe" in str(exc)
+    else:
+        raise AssertionError("expected a miss")
+
+
+def test_a_miss_with_nothing_similar_says_the_programme_may_not_be_listed_yet():
+    from app.adapters.base import AdapterError
+    a, _ = _adapter(advertisers="Completely Different Shop")
+    try:
+        a.fetch()
+    except AdapterError as exc:
+        assert "not on this account" in str(exc).lower(), str(exc)
+    else:
+        raise AssertionError("expected a miss")
+
+
+# --------------------------------------------------------------------------
 # Rows a real feed contains
 # --------------------------------------------------------------------------
 

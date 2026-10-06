@@ -78,6 +78,18 @@ FIELDS: dict[str, tuple[str, ...]] = {
 }
 
 
+# Membership wording we recognise as "you are in this programme".
+JOINED_WORDS = {"joined", "active", "yes", "1", "approved", "accepted", "live"}
+
+
+def norm(text: str) -> str:
+    """
+    Strip a name to letters and digits for comparison: "2nd Swing Golf",
+    "2ndSwing.com" and "2nd-Swing" all become comparable.
+    """
+    return "".join(c for c in str(text).lower() if c.isalnum())
+
+
 def lower_keys(row: dict) -> dict:
     """
     Column case is the advertiser's choice. The feed list uses "Advertiser
@@ -159,27 +171,53 @@ class AwinAdapter(Adapter):
         return LIST_URL.format(key=config.AWIN_API_KEY)
 
     def _wanted(self, rows: list[dict]) -> list[dict]:
-        """The feeds this account is joined to and was asked for."""
-        feed_ids = {f.strip() for f in config.AWIN_FEED_IDS.split(",") if f.strip()}
-        names = [n.strip().lower() for n in config.AWIN_ADVERTISERS.split(",") if n.strip()]
+        """
+        The feeds this account is joined to and was asked for.
 
-        chosen = []
+        Two lessons are baked in here. Match on a normalised name, because
+        "2nd Swing" has to find "2ndSwing.com" and "2nd-Swing Golf" — a plain
+        substring test misses both. And check the NAME before the membership
+        status, so that a status we do not recognise produces "found it, but
+        it says X" rather than silently matching nothing out of 900 feeds.
+        """
+        feed_ids = {f.strip() for f in config.AWIN_FEED_IDS.split(",") if f.strip()}
+        names = [norm(n) for n in config.AWIN_ADVERTISERS.split(",") if n.strip()]
+
+        chosen: list[dict] = []
+        self.near_misses: list[str] = []
+
         for row in rows:
             fid = pick(row, ("Feed ID", "feed_id", "fid")) or ""
-            advertiser = (pick(row, ("Advertiser Name", "advertiser_name")) or "").lower()
+            advertiser = pick(row, ("Advertiser Name", "advertiser_name")) or ""
             joined = (pick(row, ("Membership Status", "membership_status")) or "").lower()
 
             if feed_ids:
                 if fid in feed_ids:
                     chosen.append(row)
                 continue
-            # Without an explicit id list, only take feeds we are actually
-            # joined to — the list includes programmes you could apply to.
-            if joined and joined not in {"joined", "active", "yes", "1"}:
+
+            if names and not any(n and n in norm(advertiser) for n in names):
                 continue
-            if names and not any(n in advertiser for n in names):
-                continue
+
+            # The name matched. Membership wording varies between accounts and
+            # regions, so an unfamiliar value is reported and then tried
+            # anyway: one wasted HTTP request beats a silent empty result.
+            if joined and joined not in JOINED_WORDS:
+                log.warning(
+                    "awin: %r matched but its membership status is %r, which is "
+                    "not one of %s. Trying it anyway.",
+                    advertiser, joined, sorted(JOINED_WORDS),
+                )
             chosen.append(row)
+
+        if not chosen and names:
+            # Give the next person something to act on rather than a count.
+            for row in rows:
+                advertiser = pick(row, ("Advertiser Name", "advertiser_name")) or ""
+                flat = norm(advertiser)
+                if any(n and (n[:4] in flat or flat[:4] in n) for n in names):
+                    status = pick(row, ("Membership Status", "membership_status"))
+                    self.near_misses.append(f"{advertiser!r} (status {status!r})")
         return chosen
 
     def fetch(self, query: str | None = None, limit: int = 5000) -> list[RawOffer]:
@@ -195,11 +233,17 @@ class AwinAdapter(Adapter):
             feeds = self._feed_list(client)
             wanted = self._wanted(feeds)
             if not wanted:
+                near = getattr(self, "near_misses", [])
+                hint = (
+                    " Closest names in your list: " + "; ".join(near[:5])
+                    if near else
+                    " No advertiser in the list resembled it, which suggests the "
+                    "programme is not on this account's feed list yet — Awin can "
+                    "take a day to add a newly approved advertiser."
+                )
                 raise AdapterError(
                     "Awin returned no feeds matching AWIN_ADVERTISERS="
-                    f"{config.AWIN_ADVERTISERS!r}. The list showed "
-                    f"{len(feeds)} feed(s); check the advertiser name and that "
-                    "the programme shows as joined."
+                    f"{config.AWIN_ADVERTISERS!r} across {len(feeds)} feed(s)." + hint
                 )
 
             for feed in wanted:
