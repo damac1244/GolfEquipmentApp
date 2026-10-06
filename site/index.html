@@ -11,7 +11,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Bagdrop">
 <meta property="og:url" content="https://thebagdropgolf.com/">
-<meta property="og:title" content="Bagdrop — Someone else already broke it in">
+<meta property="og:title" content="Bagdrop — the best price on every club, new or used">
 <meta property="og:description" content="New and used golf club prices side by side, ranked by the total you pay. Updated daily.">
 <meta name="twitter:card" content="summary">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -133,16 +133,41 @@ img{display:block;max-width:100%}
 .hero-tint{position:absolute;inset:0;z-index:-1;
   background:linear-gradient(100deg,#131211 6%,color-mix(in srgb,#131211 82%,transparent) 40%,
     color-mix(in srgb,#131211 34%,transparent) 78%,color-mix(in srgb,#0e1a3d 55%,transparent) 100%)}
-.hero h1{font-size:min(66px,9vw);line-height:.98;letter-spacing:-.035em;margin:14px 0 0;
-  max-width:16ch;text-wrap:pretty;text-shadow:0 2px 24px rgba(10,12,20,.55)}
+.hero h1{font-size:min(64px,9.5vw);line-height:.95;letter-spacing:-.04em;margin:0;
+  max-width:20ch;text-wrap:pretty;text-shadow:0 2px 24px rgba(10,12,20,.55)}
 .hero h1 em{font-style:normal;color:var(--used)}
-.hero p.lede{font:400 min(17px,4.4vw)/1.55 var(--font);margin:18px 0 0;max-width:56ch}
-.herostats{display:flex;flex-wrap:wrap;margin-top:min(48px,6vw);
-  border-top:2px solid var(--color-accent);
-  background:color-mix(in srgb,#131211 62%,transparent);backdrop-filter:blur(3px)}
-.herostats div{flex:1 1 150px;padding:18px;border-right:1px solid var(--color-divider)}
-.herostats b{display:block;font:800 min(30px,6vw)/1 var(--font);letter-spacing:-.02em}
-.herostats .kick{margin-top:7px}
+.hero h1 em.is-new{color:var(--color-accent)}
+
+/* The search box is the hero's whole job now, so it gets the 2px frame the
+   design reserves for the one control that matters on a screen. */
+.herosearch{position:relative;margin-top:24px;max-width:680px}
+.herobox{display:flex;border:2px solid var(--color-text);background:var(--color-bg)}
+.herobox input{flex:1;min-width:0;background:transparent;border:0;outline:0;
+  color:var(--color-text);font:400 min(17px,4.2vw) var(--font);padding:16px;
+  -webkit-appearance:none;appearance:none}
+.herobox input::-webkit-search-cancel-button{display:none}
+.herobox input:focus-visible{outline:2px solid var(--color-accent);outline-offset:-2px}
+.heroclear{background:none;border:0;color:var(--n700);font:800 11px var(--font);
+  letter-spacing:.1em;text-transform:uppercase;padding:0 12px;cursor:pointer}
+.heroclear:hover{color:var(--color-text)}
+.herogo{background:var(--used);color:#1b2209;border:0;cursor:pointer;white-space:nowrap;
+  flex:none;padding:0 min(24px,4vw);font:800 13px var(--font);min-height:48px}
+.herogo:hover{background:#bccd80}
+.herohint{margin-top:12px;text-transform:none;letter-spacing:0;font-weight:400;
+  font-size:13px;color:var(--n800)}
+
+/* Typeahead. Suggestions come from the clubs we actually carry, so an empty
+   dropdown is itself the answer: we do not track that club. */
+.suggest{position:absolute;left:0;right:0;top:100%;z-index:5;background:var(--color-surface);
+  border:2px solid var(--color-text);border-top:0;max-height:min(340px,52vh);overflow:auto}
+.sugg{display:flex;flex-wrap:wrap;width:100%;gap:4px 12px;align-items:baseline;
+  background:none;border:0;border-bottom:1px solid var(--color-divider);
+  color:var(--color-text);padding:12px 16px;min-height:48px;cursor:pointer;text-align:left}
+.sugg:last-child{border-bottom:0}
+.sugg:hover,.sugg[aria-selected="true"]{background:var(--accent-300)}
+.sugg b{font:800 15px var(--font)}
+.sugg .sk{font-size:12px;color:var(--n700)}
+.sugg .sp{margin-left:auto;font-size:12px;white-space:nowrap}
 
 /* — two columns: filters, then the feed — */
 .columns{display:flex;flex-wrap:wrap;gap:min(36px,4vw);padding-block:min(32px,4vw)}
@@ -157,12 +182,15 @@ img{display:block;max-width:100%}
 .feedhead .kick{margin-left:auto}
 
 /* — one club in the feed — */
-.club{border-bottom:1px solid var(--color-divider)}
-.clubhead{display:flex;gap:min(20px,2.5vw);align-items:flex-start;flex-wrap:wrap;
-  width:100%;text-align:left;background:none;border:0;color:inherit;
-  padding:18px 0;cursor:pointer;font:inherit}
-.clubhead:hover{background:color-mix(in srgb,var(--color-accent) 7%,transparent)}
-.shot{width:96px;height:96px;flex:none;background:var(--n100);
+.club{border-bottom:1px solid var(--color-divider);padding:18px 0}
+/* The row is no longer one big button: the price panels are their own links
+   out, and a button cannot legally contain one. */
+.clubrow{display:flex;flex-wrap:wrap;gap:14px 20px;align-items:stretch}
+.clubhead{display:flex;gap:14px;align-items:flex-start;flex:1 1 220px;min-width:0;
+  text-align:left;background:none;border:0;color:inherit;
+  padding:0;cursor:pointer;font:inherit}
+.clubhead:hover .clubname{text-decoration:underline;text-underline-offset:3px}
+.shot{width:64px;height:64px;flex:none;background:var(--n100);
   display:flex;align-items:center;justify-content:center;overflow:hidden}
 .shot img{width:100%;height:100%;object-fit:contain;padding:6px;filter:grayscale(1) contrast(1.08)}
 .shot.empty{background-image:repeating-linear-gradient(135deg,
@@ -182,6 +210,59 @@ img{display:block;max-width:100%}
 .clubprices .kick{display:block}
 .clubprices b{display:block;font:800 min(28px,6vw)/1 var(--font);margin-top:5px}
 .clubprices .alt{display:block;font:800 16px/1 var(--font);margin-top:5px;opacity:.5}
+
+/* — the new/used pair — */
+/* Two panels, side by side, each carrying a delivered total. The border is
+   what marks the cheaper one, so the comparison survives without colour. */
+.pair{flex:2 1 380px;min-width:0;display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+.panel{position:relative;padding:12px 14px;border:2px solid transparent;text-align:left;
+  font:inherit;color:var(--color-text);min-width:0}
+.panel.p-new{background:var(--accent-300)}
+.panel.p-used{background:var(--used-100)}
+.panel.win.p-new{border-color:var(--new)}
+.panel.win.p-used{border-color:var(--used)}
+.panel.none{background:var(--n100);color:var(--n700)}
+.panel .badge{position:absolute;top:-2px;right:-2px;font:800 9px var(--font);
+  letter-spacing:.1em;text-transform:uppercase;padding:4px 7px}
+.panel.p-new .badge{background:var(--new);color:#0d1b1f}
+.panel.p-used .badge{background:var(--used);color:var(--used-ink)}
+.panel .amt{display:block;font:800 min(28px,6.5vw)/1 var(--font);margin-top:6px}
+.panel .line{display:block;font-size:11px;line-height:1.45;margin-top:6px;color:var(--n800)}
+.panel .shop{display:block;font-size:11px;margin-top:8px;text-decoration:underline}
+.panel.p-new .shop{color:var(--accent-600)}
+.panel.p-used .shop{color:var(--used)}
+.panel .kick{color:inherit;opacity:.85}
+.condbtn{background:none;border:0;padding:0;cursor:pointer;font:800 9px var(--font);
+  letter-spacing:.14em;text-transform:uppercase;color:var(--used);
+  text-decoration:underline dotted;text-underline-offset:3px;text-align:left}
+a.panel,a.plain{text-decoration:none;color:inherit;display:block}
+a.panel:hover .shop,a.plain:hover .shop{text-decoration-thickness:2px}
+a.panel:hover,a.plain:hover .amt{filter:brightness(1.08)}
+a.panel:focus-visible,.condbtn:focus-visible,a.plain:focus-visible{
+  outline:2px solid var(--color-accent);outline-offset:2px}
+
+/* How much of the new price the used one is. A 6px bar says it faster than a
+   sentence, and the sentence is there underneath for anyone who needs it. */
+.ratio{display:block;position:relative;height:6px;margin-top:12px;max-width:170px;
+  background:var(--new)}
+.ratio span{position:absolute;left:0;top:0;bottom:0;background:var(--used)}
+.ratiotext{display:block;font-size:11px;color:var(--n700);margin-top:5px}
+
+/* The verdict. One line, naming the cheaper option and the reason, from the
+   two numbers above it — never from anything we did not measure. */
+.verdict{font-size:13px;line-height:1.45;margin-top:12px;color:var(--n900)}
+.verdict b{font-weight:800}
+.verdict b.v-new{color:var(--color-accent)}
+.verdict b.v-used{color:var(--used)}
+.condnote{margin-top:12px;padding:12px 14px;background:var(--used-100);
+  border-left:3px solid var(--used);display:flex;flex-wrap:wrap;gap:6px 16px;
+  align-items:baseline;font-size:13px}
+.condnote b{font:800 12px var(--font);color:var(--used)}
+@media (max-width:640px){
+  .pair{grid-template-columns:minmax(0,1fr)}
+  .ratio{max-width:none}
+}
 .is-new{color:var(--new)}
 .is-used{color:var(--used)}
 .chev{margin-left:auto;align-self:center;color:var(--n500);font-size:11px}
@@ -290,15 +371,20 @@ footer .wrap{padding-block:min(40px,5vw)}
 <section class="hero">
   <div class="hero-tint"></div>
   <div class="wrap">
-    <div class="kick">New and used golf equipment, priced side by side</div>
-    <h1>Someone else already <em>broke it in.</em></h1>
-    <p class="lede" id="herolede">Bagdrop checks every seller it can reach for the club
-    you want, then shows the new price and the used price in the same row — with the
-    condition, the seller, and the total you actually pay.</p>
-    <div class="row" style="gap:10px;margin-top:24px;flex-wrap:wrap">
-      <button class="btn btn-primary" type="button" id="tosearch">Search a club</button>
+    <h1>The best price on every club. <em class="is-new">New</em> or <em>used.</em></h1>
+    <div class="herosearch">
+      <form class="herobox" id="herosearch" role="search" autocomplete="off">
+        <label for="hq" style="position:absolute;left:-9999px">Search for a club</label>
+        <input type="search" id="hq" placeholder="Brand, model or loft — e.g. TSR3 driver"
+               autocomplete="off" enterkeyhint="search" aria-describedby="herohint"
+               aria-expanded="false" aria-controls="suggest" role="combobox">
+        <button class="heroclear" type="button" id="heroclear" hidden>Clear</button>
+        <button class="herogo" type="submit">Find both prices</button>
+      </form>
+      <div class="suggest" id="suggest" role="listbox" hidden></div>
     </div>
-    <div class="herostats" id="herostats"></div>
+    <div class="herohint kick" id="herohint">Totals include shipping where the seller
+    states it. Prices refreshed daily.</div>
   </div>
 </section>
 
@@ -328,12 +414,13 @@ footer .wrap{padding-block:min(40px,5vw)}
       </div>
 
       <div class="sideblock">
-        <div class="kick">Handedness</div>
-        <div class="row" id="hands">
+        <div class="kick">Your specs</div>
+        <div class="row" id="hands" style="margin-top:10px">
           <button class="chip" type="button" data-hand="" aria-pressed="true">All</button>
           <button class="chip" type="button" data-hand="RH" aria-pressed="false">Right</button>
           <button class="chip" type="button" data-hand="LH" aria-pressed="false">Left</button>
         </div>
+        <div class="row" id="flexes" style="margin-top:8px"></div>
         <div class="kick" id="handnote" style="margin-top:10px;text-transform:none;letter-spacing:0;font-weight:400" hidden></div>
       </div>
 
@@ -359,7 +446,7 @@ footer .wrap{padding-block:min(40px,5vw)}
 
     <div class="feed">
       <div class="feedhead">
-        <h2 id="feedtitle">Every seller, one row each</h2>
+        <h2 id="feedtitle">Today’s best prices</h2>
         <div class="kick" id="heading">&nbsp;</div>
       </div>
       <div id="results"></div>
@@ -416,12 +503,16 @@ footer .wrap{padding-block:min(40px,5vw)}
   var conds     = document.getElementById("conds");
   var hands     = document.getElementById("hands");
   var handNote  = document.getElementById("handnote");
+  var flexes    = document.getElementById("flexes");
   var headEl    = document.getElementById("heading");
   var moreBtn   = document.getElementById("more");
   var formEl    = document.getElementById("search");
+  var hInput    = document.getElementById("hq");
+  var hForm     = document.getElementById("herosearch");
+  var hClear    = document.getElementById("heroclear");
+  var suggEl    = document.getElementById("suggest");
   var syncLine  = document.getElementById("syncline");
   var syncDet   = document.getElementById("syncdetail");
-  var statsEl   = document.getElementById("herostats");
   var curEl     = document.getElementById("currency");
   var titleEl   = document.getElementById("feedtitle");
 
@@ -429,8 +520,10 @@ footer .wrap{padding-block:min(40px,5vw)}
   var typeFilter = "";
   var condFilter = "";
   var handFilter = "";   // "", "RH" or "LH"
+  var flexFilter = "";   // "" or a flex code present in the data
   var sortBy = "sellers";
   var open = {};   // club id -> expanded
+  var gradeOpen = {}; // club id -> grade note shown
 
   // Rendering every club with its photo at once is slow on a phone and buries
   // everything below the list. Show a page at a time.
@@ -568,6 +661,9 @@ footer .wrap{padding-block:min(40px,5vw)}
       if (handFilter && !c.variants.some(function (v) { return v.dex === handFilter; })) {
         return false;
       }
+      if (flexFilter && !c.variants.some(function (v) { return v.flex === flexFilter; })) {
+        return false;
+      }
       if (condFilter === "used" && (c.used_from === null || c.used_from === undefined)) return false;
       if (condFilter === "new" && (c.new_from === null || c.new_from === undefined)) return false;
       if (!words.length) return true;
@@ -650,9 +746,12 @@ footer .wrap{padding-block:min(40px,5vw)}
   // recomputed from the variants that survive, exactly the way the export
   // computes it from all of them.
   function viewOf(c) {
-    if (!handFilter) return c;
+    if (!handFilter && !flexFilter) return c;
 
-    var vs = c.variants.filter(function (v) { return v.dex === handFilter; });
+    var vs = c.variants.filter(function (v) {
+      return (!handFilter || v.dex === handFilter) &&
+             (!flexFilter || v.flex === flexFilter);
+    });
     if (!vs.length) return null;
 
     var comparable = [];
@@ -706,6 +805,145 @@ footer .wrap{padding-block:min(40px,5vw)}
     return "Prices close together across sellers";
   }
 
+  // --- the new/used pair ---------------------------------------------------
+
+  // The cheapest offer on one side of the new/used line that we are willing to
+  // stand behind. Suspect rows are excluded, for the same reason the export
+  // leaves them out of its figures: a price we could not compare like for like
+  // should not win a comparison.
+  function bestOffer(c, side) {
+    var best = null;
+    c.variants.forEach(function (v) {
+      v.offers.forEach(function (o) {
+        if (o.suspect) return;
+        var isNew = o.condition === "new";
+        if (side === "new" ? !isNew : isNew) return;
+        if (!best || o.total < best.total) best = o;
+      });
+    });
+    return best;
+  }
+
+  // What we know about an offer beyond its price. Deliberately only the fields
+  // the feed actually carries: shipping, who is selling, how stale the number
+  // is, and the seller's rating where there is one. Returns policy and
+  // warranty are not in any feed we read, so the panel does not mention them.
+  function offerFacts(o) {
+    var bits = [];
+    if (o.shipping === null || o.shipping === undefined) {
+      bits.push("shipping not stated");
+    } else if (o.shipping > 0) {
+      bits.push("incl. " + money(o.shipping, o.currency) + " shipping");
+    } else {
+      bits.push("free shipping");
+    }
+    if (o.rating) {
+      bits.push(o.rating + "★" + (o.rating_count ? " (" + o.rating_count + ")" : ""));
+    }
+    bits.push(seenLabel(o.seen).text);
+    return bits.join(" · ");
+  }
+
+  function panel(side, o, win, c) {
+    var cls = side === "new" ? "p-new" : "p-used";
+    if (!o) {
+      return '<div class="panel none ' + cls + ' p-empty">' +
+        '<span class="kick">' + (side === "new" ? "New" : "Used") + '</span>' +
+        '<span class="amt" style="font-size:18px">—</span>' +
+        '<span class="line">' + (side === "new"
+          ? "No seller we reach lists this club new."
+          : "No used listing yet. 2nd Swing and the pre-owned feeds are " +
+            "still being connected.") + '</span></div>';
+    }
+    var badge = win ? '<span class="badge">Best deal</span>' : "";
+    var money_ = '<span class="amt num">' + money(o.total, o.currency) + '</span>' +
+      '<span class="line">' + esc(offerFacts(o)) + '</span>' +
+      '<span class="shop">' + esc(o.retailer) + ' ↗</span>';
+    var link = '" target="_blank" rel="nofollow noopener sponsored">';
+
+    // A grade is the seller's word, and the button that explains that cannot
+    // live inside the link — so the used panel is a wrapper holding both.
+    if (side === "used" && o.grade) {
+      return '<div class="panel ' + cls + (win ? " win" : "") + '">' + badge +
+        '<button class="condbtn" type="button" data-grade="' + esc(c.id) + '"' +
+          ' aria-expanded="' + (!!gradeOpen[c.id]) + '">Used · ' + esc(o.grade) +
+          ' <span aria-hidden="true">&#9432;</span></button>' +
+        '<a class="plain" href="' + esc(o.url) + link + money_ + '</a></div>';
+    }
+
+    return '<a class="panel ' + cls + (win ? " win" : "") + '" href="' + esc(o.url) +
+      link + badge +
+      '<span class="kick">' + (side === "new" ? "New" : "Used") + '</span>' +
+      money_ + '</a>';
+  }
+
+  function pairPanels(c, bestNew, bestUsed) {
+    // A panel only wins against a real opponent. With one side empty there is
+    // nothing to have won, and a "best deal" badge on the only price on screen
+    // is a boast about arithmetic nobody did.
+    var newWin = false, usedWin = false;
+    if (bestNew && bestUsed) {
+      newWin = bestNew.total <= bestUsed.total;
+      usedWin = !newWin;
+    }
+    return '<div class="pair">' +
+      panel("new", bestNew, newWin, c) +
+      panel("used", bestUsed, usedWin, c) + '</div>';
+  }
+
+  function ratioBar(bestNew, bestUsed) {
+    if (!bestNew || !bestUsed || !bestNew.total) return "";
+    var pct = Math.round(bestUsed.total / bestNew.total * 100);
+    return '<span class="ratio" role="img" aria-label="Used costs ' + pct +
+      ' percent of new"><span style="width:' + Math.min(pct, 100) + '%"></span></span>' +
+      '<span class="ratiotext">Used costs ' + pct + '% of new</span>';
+  }
+
+  // One line naming the cheaper option and why, using only the two totals on
+  // screen. Where one side is missing, it says that instead of inventing a
+  // comparison.
+  function verdictLine(c, bestNew, bestUsed) {
+    var label, cls, text;
+    if (bestNew && bestUsed) {
+      var gap = Math.abs(bestNew.total - bestUsed.total);
+      if (bestNew.total <= bestUsed.total) {
+        label = "Buy new"; cls = "v-new";
+        text = gap < 1
+          ? "New costs the same as the cheapest used listing, so there is no reason " +
+            "to take the wear."
+          : "New is " + money(gap, c.currency) + " cheaper delivered than the " +
+            "cheapest used listing.";
+      } else {
+        label = "Buy used"; cls = "v-used";
+        text = "Used saves " + money(gap, c.currency) + " delivered" +
+          (bestUsed.grade ? ", graded " + bestUsed.grade.toLowerCase() : "") +
+          ", from " + bestUsed.retailer + ".";
+      }
+    } else if (bestNew) {
+      label = "New only"; cls = "v-new";
+      text = "We have no used listing for this club, so there is nothing to " +
+        "compare the new price against yet.";
+    } else if (bestUsed) {
+      label = "Used only"; cls = "v-used";
+      text = "No seller we reach has this club new — it is out of current stock " +
+        "or discontinued.";
+    } else {
+      return "";
+    }
+    return '<p class="verdict"><b class="' + cls + '">' + label + ':</b> ' +
+      esc(text) + '</p>';
+  }
+
+  // Grades are the seller's own wording, so the note says whose word it is
+  // rather than pretending we inspected the club.
+  function gradeNote(o) {
+    return '<div class="condnote"><b>' + esc(o.grade) + '</b> ' +
+      '<span style="flex:1 1 240px">is ' + esc(o.retailer) + '&rsquo;s own grading, ' +
+      'not ours. Grades are not standard between sellers — check the listing ' +
+      'photos and the seller&rsquo;s own description of what the grade covers ' +
+      'before you buy.</span></div>';
+  }
+
   function card(c) {
     var isOpen = !!open[c.id];
 
@@ -746,28 +984,17 @@ footer .wrap{padding-block:min(40px,5vw)}
         'decoding="async" referrerpolicy="no-referrer">' + ph + '</span>'
       : '<span class="shot empty">' + ph + '</span>';
 
-    // Lead with whichever price someone can actually act on. A used price is
-    // the story when there is one; otherwise the new price is not a fallback,
-    // it is the answer.
-    var leadLabel, leadVal, leadCls, altLabel, altVal;
-    if (c.used_from !== null && c.used_from !== undefined) {
-      leadLabel = "used from"; leadVal = c.used_from; leadCls = "is-used";
-      altLabel = "new from"; altVal = c.new_from;
-    } else {
-      leadLabel = "new from"; leadVal = c.new_from; leadCls = "is-new";
-      altLabel = "used"; altVal = null;
-    }
-
-    var prices =
-      '<span class="clubprices">' +
-        '<span><span class="kick">' + leadLabel + '</span>' +
-          '<b class="' + leadCls + ' num">' + money(leadVal, c.currency) + '</b></span>' +
-        '<span><span class="kick">' + altLabel + '</span>' +
-          (altVal !== null && altVal !== undefined
-            ? '<span class="alt num">' + money(altVal, c.currency) + '</span>'
-            : '<span class="alt">none listed</span>') + '</span>' +
-        '<span class="chev">' + (isOpen ? "▲" : "▼") + '</span>' +
-      '</span>';
+    // Both prices, side by side, each its own link out. The delivered total is
+    // the only number either panel shows: price-plus-shipping is what you pay,
+    // and showing the pre-shipping figure next to it just invites the reader
+    // to compare the wrong pair.
+    var bestNew = bestOffer(c, "new");
+    var bestUsed = bestOffer(c, "used");
+    var prices = pairPanels(c, bestNew, bestUsed);
+    var ratio = ratioBar(bestNew, bestUsed);
+    var verdict = verdictLine(c, bestNew, bestUsed);
+    var condBox = gradeOpen[c.id] && bestUsed && bestUsed.grade
+      ? gradeNote(bestUsed) : "";
 
     var body = "";
     if (isOpen) {
@@ -788,19 +1015,24 @@ footer .wrap{padding-block:min(40px,5vw)}
 
     return '' +
       '<article class="club">' +
-        '<button class="clubhead" type="button" data-id="' + esc(c.id) +
-          '" aria-expanded="' + isOpen + '">' +
-          shot +
-          '<span class="clubmain">' +
-            '<span class="row" style="gap:10px;flex-wrap:wrap">' +
-              '<span class="clubname">' + esc(c.name) + '</span>' + cut + low +
+        '<div class="clubrow">' +
+          '<button class="clubhead" type="button" data-id="' + esc(c.id) +
+            '" aria-expanded="' + isOpen + '">' +
+            shot +
+            '<span class="clubmain">' +
+              '<span class="row" style="gap:10px;flex-wrap:wrap">' +
+                '<span class="clubname">' + esc(c.name) + '</span>' + cut + low +
+              '</span>' +
+              '<span class="kick" style="display:block;margin-top:6px">' +
+                esc(spec.join(" · ")) + '</span>' +
+              ratio +
+              '<span class="clubnote">' + esc(noteFor(c)) +
+                ' <span aria-hidden="true">' + (isOpen ? "▲" : "▼") + '</span></span>' +
             '</span>' +
-            '<span class="kick" style="display:block;margin-top:6px">' +
-              esc(spec.join(" · ")) + '</span>' +
-            '<span class="clubnote">' + esc(noteFor(c)) + '</span>' +
-          '</span>' +
+          '</button>' +
           prices +
-        '</button>' + body +
+        '</div>' +
+        verdict + condBox + body +
       '</article>';
   }
 
@@ -810,7 +1042,7 @@ footer .wrap{padding-block:min(40px,5vw)}
     headEl.textContent = list.length ? headingText(list.length) : "no matches";
     titleEl.textContent = currentQuery()
       ? "Results for “" + currentQuery() + "”"
-      : (sortBy === "saving" ? "Today's biggest price gaps" : "Every seller, one row each");
+      : (sortBy === "saving" ? "Today’s biggest price gaps" : "Today’s best prices");
 
     if (!list.length) {
       moreBtn.hidden = true;
@@ -854,9 +1086,36 @@ footer .wrap{padding-block:min(40px,5vw)}
     if (typeFilter) u.set("type", typeFilter);
     if (condFilter) u.set("cond", condFilter);
     if (handFilter) u.set("hand", handFilter);
+    if (flexFilter) u.set("flex", flexFilter);
     if (sortBy !== "sellers") u.set("sort", sortBy);
     var s = u.toString();
     history.replaceState(null, "", s ? "?" + s : location.pathname);
+  }
+
+  // Flex wording is the seller's, normalised by the matcher to a short code.
+  // Only codes that actually appear get a chip: a "Ladies" chip that matches
+  // nothing is a worse answer than no chip at all.
+  var FLEX_LABEL = { L: "Ladies", A: "Senior", R: "Regular", S: "Stiff", X: "X-Stiff" };
+  var FLEX_ORDER = ["L", "A", "R", "S", "X"];
+
+  function buildFlexChips() {
+    var seen = {};
+    DATA.clubs.forEach(function (c) {
+      c.variants.forEach(function (v) { if (v.flex) seen[v.flex] = 1; });
+    });
+    var codes = FLEX_ORDER.filter(function (f) { return seen[f]; })
+      .concat(Object.keys(seen).filter(function (f) {
+        return FLEX_ORDER.indexOf(f) === -1;
+      }).sort());
+    if (!codes.length) { flexes.hidden = true; return; }
+
+    flexes.innerHTML = '<button class="chip" type="button" data-flex="" ' +
+      'aria-pressed="true">Any flex</button>' +
+      codes.map(function (f) {
+        return '<button class="chip" type="button" data-flex="' + esc(f) +
+          '" aria-pressed="false">' + esc(FLEX_LABEL[f] || f) + '</button>';
+      }).join("");
+    press(flexes, "data-flex", flexFilter);
   }
 
   function press(group, attr, value) {
@@ -875,6 +1134,7 @@ footer .wrap{padding-block:min(40px,5vw)}
     condFilter = (c === "new" || c === "used") ? c : "";
     var hd = u.get("hand") || "";
     handFilter = (hd === "RH" || hd === "LH") ? hd : "";
+    flexFilter = (u.get("flex") || "").toUpperCase();
     var s = u.get("sort") || "sellers";
     sortBy = SORTS[s] ? s : "sellers";
     press(hands, "data-hand", handFilter);
@@ -903,6 +1163,13 @@ footer .wrap{padding-block:min(40px,5vw)}
   }, true);
 
   results.addEventListener("click", function (e) {
+    var g = e.target.closest(".condbtn");
+    if (g) {
+      var gid = g.getAttribute("data-grade");
+      gradeOpen[gid] = !gradeOpen[gid];
+      render();
+      return;
+    }
     var btn = e.target.closest(".clubhead");
     if (!btn) return;
     var id = btn.getAttribute("data-id");
@@ -934,6 +1201,14 @@ footer .wrap{padding-block:min(40px,5vw)}
     refresh();
   });
 
+  flexes.addEventListener("click", function (e) {
+    var btn = e.target.closest(".chip");
+    if (!btn) return;
+    flexFilter = btn.getAttribute("data-flex") || "";
+    press(flexes, "data-flex", flexFilter);
+    refresh();
+  });
+
   sorts.addEventListener("click", function (e) {
     var btn = e.target.closest(".chip");
     if (!btn) return;
@@ -943,9 +1218,11 @@ footer .wrap{padding-block:min(40px,5vw)}
   });
 
   document.getElementById("clear").addEventListener("click", function () {
-    qInput.value = ""; typeFilter = ""; condFilter = ""; handFilter = ""; sortBy = "sellers";
+    qInput.value = ""; typeFilter = ""; condFilter = ""; handFilter = "";
+    flexFilter = ""; sortBy = "sellers";
     press(filters, "data-type", ""); press(conds, "data-cond", "");
     press(hands, "data-hand", ""); press(sorts, "data-sort", "sellers");
+    press(flexes, "data-flex", "");
     refresh();
   });
 
@@ -955,10 +1232,6 @@ footer .wrap{padding-block:min(40px,5vw)}
     location.reload();
   });
 
-  document.getElementById("tosearch").addEventListener("click", function () {
-    qInput.focus();
-    qInput.scrollIntoView({ behavior: "smooth", block: "center" });
-  });
 
   // Collapsed by default on a phone, always open on a wider screen. Re-checked
   // on resize so rotating the handset does not leave it in the wrong state.
@@ -988,6 +1261,115 @@ footer .wrap{padding-block:min(40px,5vw)}
   qInput.addEventListener("input", function () {
     clearTimeout(timer);
     timer = setTimeout(refresh, 140);
+  });
+
+  // --- hero search and typeahead -------------------------------------------
+
+  // Suggestions come from the clubs we carry, so the dropdown doubles as an
+  // honest answer: nothing listed means we do not track that club, which is
+  // worth knowing before you scroll a page of near-misses.
+  var suggIdx = -1, suggList = [];
+
+  function closeSuggest() {
+    suggEl.hidden = true;
+    suggEl.innerHTML = "";
+    hInput.setAttribute("aria-expanded", "false");
+    suggIdx = -1;
+    suggList = [];
+  }
+
+  function buildSuggest() {
+    var q = hInput.value.trim().toLowerCase();
+    hClear.hidden = !q;
+    if (!DATA || q.length < 2) return closeSuggest();
+
+    var words = q.split(/\s+/);
+    suggList = DATA.clubs.filter(function (c) {
+      var hay = (c.name + " " + (c.brand || "") + " " + (c.model || "")).toLowerCase();
+      return words.every(function (w) { return hay.indexOf(w) !== -1; });
+    }).sort(function (a, b) { return b.sellers - a.sellers; }).slice(0, 6);
+
+    if (!suggList.length) return closeSuggest();
+
+    suggEl.innerHTML = suggList.map(function (c, i) {
+      var from = c.used_from !== null && c.used_from !== undefined
+        ? '<span class="sp" style="color:var(--used)">used from ' +
+          money(c.used_from, c.currency) + '</span>'
+        : (c.new_from !== null && c.new_from !== undefined
+            ? '<span class="sp" style="color:var(--color-accent)">new from ' +
+              money(c.new_from, c.currency) + '</span>'
+            : "");
+      return '<button class="sugg" type="button" role="option" aria-selected="false" ' +
+        'data-i="' + i + '"><b>' + esc(c.name) + '</b>' +
+        '<span class="sk">' + esc(TYPE_LABEL[c.type] || "Club") + ' · ' +
+        c.sellers + (c.sellers === 1 ? " seller" : " sellers") + '</span>' +
+        from + '</button>';
+    }).join("");
+    suggEl.hidden = false;
+    hInput.setAttribute("aria-expanded", "true");
+    suggIdx = -1;
+  }
+
+  function markSuggest() {
+    Array.prototype.forEach.call(suggEl.querySelectorAll(".sugg"), function (b, i) {
+      b.setAttribute("aria-selected", i === suggIdx ? "true" : "false");
+    });
+  }
+
+  // One search box drives the page, so the hero hands its text to the header
+  // field rather than keeping a second copy of the query.
+  function runHeroSearch(text) {
+    qInput.value = text;
+    hInput.value = text;
+    hClear.hidden = !text;
+    closeSuggest();
+    clearTimeout(timer);
+    refresh();
+    document.querySelector(".feedhead").scrollIntoView({
+      behavior: "smooth", block: "start"
+    });
+  }
+
+  hInput.addEventListener("input", buildSuggest);
+
+  hInput.addEventListener("keydown", function (e) {
+    if (suggEl.hidden) return;
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      suggIdx += e.key === "ArrowDown" ? 1 : -1;
+      if (suggIdx < 0) suggIdx = suggList.length - 1;
+      if (suggIdx >= suggList.length) suggIdx = 0;
+      markSuggest();
+    } else if (e.key === "Enter" && suggIdx >= 0) {
+      e.preventDefault();
+      runHeroSearch(suggList[suggIdx].name);
+    } else if (e.key === "Escape") {
+      closeSuggest();
+    }
+  });
+
+  suggEl.addEventListener("click", function (e) {
+    var b = e.target.closest(".sugg");
+    if (!b) return;
+    runHeroSearch(suggList[Number(b.getAttribute("data-i"))].name);
+  });
+
+  hForm.addEventListener("submit", function (e) {
+    e.preventDefault();
+    runHeroSearch(hInput.value.trim());
+    hInput.blur();
+  });
+
+  hClear.addEventListener("click", function () {
+    hInput.value = "";
+    hClear.hidden = true;
+    closeSuggest();
+    if (currentQuery()) { qInput.value = ""; refresh(); }
+    hInput.focus();
+  });
+
+  document.addEventListener("click", function (e) {
+    if (!e.target.closest(".herosearch")) closeSuggest();
   });
 
   // Pressing Enter should put the results in view and the keyboard away, not
@@ -1026,21 +1408,13 @@ footer .wrap{padding-block:min(40px,5vw)}
       syncDet.textContent = d.retailer_count.toLocaleString() + " sellers · " +
         d.offer_count.toLocaleString() + " listings · refreshed daily";
 
-      // Counted from the data on every load, so these never go stale.
-      var stats = [
-        [d.club_count.toLocaleString(), "clubs tracked"],
-        [d.retailer_count.toLocaleString(), "sellers checked"],
-        [d.offer_count.toLocaleString(), "live prices"],
-        [when, "last checked"]
-      ];
-      statsEl.innerHTML = stats.map(function (s) {
-        return '<div><b>' + esc(s[0]) + '</b><span class="kick">' + esc(s[1]) + '</span></div>';
-      }).join("");
+      // Counted from the data on every load, so the claim never goes stale.
+      document.getElementById("herohint").textContent =
+        d.club_count.toLocaleString() + " clubs across " +
+        d.retailer_count.toLocaleString() + " sellers. Totals include shipping where " +
+        "the seller states it. Prices checked " + when + ".";
 
-      document.getElementById("herolede").textContent =
-        "Bagdrop checks " + d.retailer_count.toLocaleString() + " sellers for the club you " +
-        "want, then shows the new price and the used price in the same row — with the " +
-        "condition, the seller, and the total you actually pay.";
+      buildFlexChips();
 
       document.getElementById("footblurb").textContent =
         "New and used golf equipment prices from " + d.retailer_count.toLocaleString() +
