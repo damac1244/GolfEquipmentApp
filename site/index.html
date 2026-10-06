@@ -235,6 +235,7 @@ img{display:block;max-width:100%}
 .panel .amt{display:block;font:800 min(28px,6.5vw)/1 var(--font);margin-top:6px}
 .panel .line{display:block;font-size:11px;line-height:1.45;margin-top:6px;color:var(--n800)}
 .panel .shop{display:block;font-size:11px;margin-top:8px;text-decoration:underline}
+.panel .shop b{font-weight:800}
 .panel.p-new .shop{color:var(--accent-600)}
 .panel.p-used .shop{color:var(--used)}
 .panel .kick{color:inherit;opacity:.85}
@@ -716,7 +717,8 @@ footer .wrap{padding-block:min(40px,5vw)}
           '<td class="r"><span class="total ' + cls + ' num">' + money(o.total, o.currency) +
             '</span><br>' + ship + '</td>' +
           '<td class="r"><a class="go" href="' + esc(o.url) +
-            '" target="_blank" rel="nofollow noopener sponsored">View</a></td>' +
+            '" target="_blank" rel="nofollow noopener sponsored">' +
+            (destination(o.url) ? "Find it" : "View") + '</a></td>' +
         '</tr>';
     }
     return html;
@@ -849,6 +851,27 @@ footer .wrap{padding-block:min(40px,5vw)}
     return bits.join(" · ");
   }
 
+  // Who the link actually sends you to. Until a merchant feed lands, every
+  // url is a Google Shopping results page: the seller and the price are real,
+  // the destination is not. A row showing a seller's name over a link to
+  // Google reads as broken, so the label says where you will land and keeps
+  // the seller as the fact it is.
+  function destination(url) {
+    var host = "";
+    try { host = new URL(url, location.href).hostname.replace(/^www\./, ""); }
+    catch (e) { return null; }
+    if (/(^|\.)google\./.test(host)) return "Google Shopping";
+    return null;
+  }
+
+  function shopLine(o) {
+    var via = destination(o.url);
+    return via
+      ? '<span class="shop"><b>' + esc(o.retailer) + '</b> \u2014 via ' +
+        esc(via) + ' \u2197</span>'
+      : '<span class="shop">' + esc(o.retailer) + ' \u2197</span>';
+  }
+
   function panel(side, o, win, c) {
     var cls = side === "new" ? "p-new" : "p-used";
     if (!o) {
@@ -863,7 +886,7 @@ footer .wrap{padding-block:min(40px,5vw)}
     var badge = win ? '<span class="badge">Best deal</span>' : "";
     var money_ = '<span class="amt num">' + money(o.total, o.currency) + '</span>' +
       '<span class="line">' + esc(offerFacts(o)) + '</span>' +
-      '<span class="shop">' + esc(o.retailer) + ' ↗</span>';
+      shopLine(o);
     var link = '" target="_blank" rel="nofollow noopener sponsored">';
 
     // A grade is the seller's word, and the button that explains that cannot
