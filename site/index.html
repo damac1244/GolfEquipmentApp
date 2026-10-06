@@ -123,7 +123,12 @@ img{display:block;max-width:100%}
 .syncdetail{font:400 10.5px/1.4 var(--font);margin-top:2px;color:var(--n700)}
 
 /* — hero — */
-.hero{position:relative;isolation:isolate;overflow:hidden;
+/* No overflow:hidden here. The typeahead is a child of the hero and has to
+   hang below it; clipping the hero clips the dropdown. The three background
+   layers are all inset:0, so there is nothing to clip anyway — and z-index
+   lifts the hero's stacking context above the feed, which the price panels
+   would otherwise paint over. */
+.hero{position:relative;isolation:isolate;z-index:2;
   border-bottom:2px solid var(--color-accent);
   padding:min(76px,9vw) 0 min(40px,5vw)}
 .hero::before,.hero::after{content:"";position:absolute;inset:0}
