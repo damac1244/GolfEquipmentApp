@@ -44,7 +44,10 @@ AWIN_API_KEY = os.getenv("AWIN_API_KEY")
 AWIN_FEED_LIST_URL = os.getenv("AWIN_FEED_LIST_URL", "")
 # Which advertisers to pull. Matched loosely against the feed list, so
 # "2nd Swing" catches "2nd Swing Golf". Empty means every joined feed.
-AWIN_ADVERTISERS = os.getenv("AWIN_ADVERTISERS", "2nd Swing")
+# An unset GitHub Actions secret arrives as an EMPTY string, not as an absent
+# variable, so os.getenv's default never fires there. Empty must mean "use the
+# default", or a missing secret silently turns "2nd Swing" into "every feed".
+AWIN_ADVERTISERS = os.getenv("AWIN_ADVERTISERS") or "2nd Swing"
 # Exact feed ids, if you would rather be precise than rely on the name.
 AWIN_FEED_IDS = os.getenv("AWIN_FEED_IDS", "")
 # Recorded on every Awin row so the export can mark which listings earn. It is

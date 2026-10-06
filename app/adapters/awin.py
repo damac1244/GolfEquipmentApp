@@ -185,14 +185,22 @@ class AwinAdapter(Adapter):
 
         chosen: list[dict] = []
         self.near_misses: list[str] = []
+        self.joined_names: list[str] = []
 
         for row in rows:
             fid = pick(row, ("Feed ID", "feed_id", "fid")) or ""
+            aid = pick(row, ("Advertiser ID", "advertiser_id", "aid")) or ""
             advertiser = pick(row, ("Advertiser Name", "advertiser_name")) or ""
             joined = (pick(row, ("Membership Status", "membership_status")) or "").lower()
 
+            if not joined or joined in JOINED_WORDS:
+                self.joined_names.append(advertiser)
+
+            # An id may be either column. Awin's own sign-up links carry the
+            # ADVERTISER id (2nd Swing is 95935), which is not the feed id, and
+            # pasting the number you were given should just work.
             if feed_ids:
-                if fid in feed_ids:
+                if fid in feed_ids or aid in feed_ids:
                     chosen.append(row)
                 continue
 
@@ -233,18 +241,29 @@ class AwinAdapter(Adapter):
             feeds = self._feed_list(client)
             wanted = self._wanted(feeds)
             if not wanted:
+                # Two failed runs taught this: a count of feeds is not a
+                # diagnosis. The list itself is the evidence, so print it —
+                # whoever reads the log should be able to settle the question
+                # without another commit, push and twenty-minute wait.
                 near = getattr(self, "near_misses", [])
-                hint = (
-                    " Closest names in your list: " + "; ".join(near[:5])
-                    if near else
-                    " No advertiser in the list resembled it, which suggests the "
-                    "programme is not on this account's feed list yet — Awin can "
-                    "take a day to add a newly approved advertiser."
-                )
-                raise AdapterError(
+                joined = getattr(self, "joined_names", [])
+                lines = [
                     "Awin returned no feeds matching AWIN_ADVERTISERS="
-                    f"{config.AWIN_ADVERTISERS!r} across {len(feeds)} feed(s)." + hint
+                    f"{config.AWIN_ADVERTISERS!r} across {len(feeds)} feed(s)."
+                ]
+                if near:
+                    lines.append("Closest names: " + "; ".join(near[:5]))
+                lines.append(
+                    f"The feed list holds {len(joined)} advertiser(s) this account "
+                    "can download: " + (", ".join(sorted(joined)[:60]) or "none")
                 )
+                lines.append(
+                    "If 2nd Swing is not in that list, the programme is approved "
+                    "but publishes no product feed through Awin — no code change "
+                    "reaches it. Set AWIN_FEED_IDS=95935 (their advertiser id) to "
+                    "pin it by number instead of by name."
+                )
+                raise AdapterError(" ".join(lines))
 
             for feed in wanted:
                 advertiser = pick(feed, ("Advertiser Name", "advertiser_name")) or "Unknown"
